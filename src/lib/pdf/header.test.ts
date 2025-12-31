@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
-import { drawNavigationHeader, NavigationHeaderOptions } from './header';
+import { drawNavigationHeader, type NavigationHeaderOptions } from './header';
 import { PageRegistry } from './links';
 import type { NavigationLink } from '../config';
 

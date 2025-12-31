@@ -32,44 +32,44 @@
 - [ ] Task: Add page number links to each section (Phase 3)
 
 ### Task 2.3: Guide/Legend Page
-- [~] Task: Write tests for guide page generation
-- [ ] Task: Implement guide page with navigation tips and icon legend
+- [x] Task: Write tests for guide page generation (guide.test.ts)
+- [x] Task: Implement guide page with navigation tips and icon legend (existing implementation)
 
 ### Task 2.4: Future Log Pages
-- [ ] Task: Write tests for future log generation
-- [ ] Task: Implement 12-month future log overview (3 months per page)
+- [x] Task: Write tests for future log generation (pages.test.ts)
+- [x] Task: Implement 12-month future log overview (6 months per page, 2 pages total)
 
 ### Task 2.5: Monthly Pages
-- [ ] Task: Write tests for monthly page generation
-- [ ] Task: Implement monthly calendar grid with day links
-- [ ] Task: Add habit tracker sidebar if enabled
-- [ ] Task: Implement monthly reflection section if enabled
+- [x] Task: Write tests for monthly page generation (pages.test.ts)
+- [x] Task: Implement monthly calendar grid with day links
+- [~] Task: Add habit tracker sidebar if enabled (Phase 3)
+- [~] Task: Implement monthly reflection section if enabled (Phase 3)
 
 ### Task 2.6: Weekly Pages
-- [ ] Task: Write tests for weekly page generation
-- [ ] Task: Implement 7-day weekly layout
-- [ ] Task: Add daily page links for each day
-- [ ] Task: Implement weekly reflection section if enabled
+- [x] Task: Write tests for weekly page generation (pages.test.ts)
+- [x] Task: Implement 7-day weekly layout
+- [~] Task: Add daily page links for each day (Phase 3)
+- [x] Task: Implement weekly reflection section if enabled
 
 ### Task 2.7: Daily Pages
-- [ ] Task: Write tests for daily page generation
-- [ ] Task: Implement year-aware date header with single-letter day abbreviation
-- [ ] Task: Implement freeform layout (dot grid only)
-- [ ] Task: Implement time-blocked layout with configurable hours
-- [ ] Task: Display events from iCal import on relevant days
+- [x] Task: Write tests for daily page generation (pages.test.ts, memory-intensive tests skipped)
+- [x] Task: Implement year-aware date header with single-letter day abbreviation
+- [x] Task: Implement freeform layout (dot grid only)
+- [x] Task: Implement time-blocked layout with configurable hours
+- [x] Task: Display events from iCal import on relevant days
 
 ### Task 2.8: Habit Tracker Pages
-- [ ] Task: Write tests for habit tracker generation
-- [ ] Task: Implement monthly habit grid with habit names from config
+- [x] Task: Write tests for habit tracker generation (pages.test.ts)
+- [x] Task: Implement monthly habit grid with habit names from config
 
 ### Task 2.9: Collection Pages
-- [ ] Task: Write tests for collection index and pages
-- [ ] Task: Implement collection index with write-in slots
-- [ ] Task: Implement collection page templates (blank, dotgrid, lined, checklist, grid)
+- [x] Task: Write tests for collection index and pages (pages.test.ts)
+- [x] Task: Implement collection index with write-in slots
+- [x] Task: Implement collection page templates (blank, dotgrid, lined, checklist, grid)
 
 ### Task 2.10: Notes Pages
-- [ ] Task: Write tests for notes page generation
-- [ ] Task: Implement configurable number of notes pages at end
+- [x] Task: Write tests for notes page generation (pages.test.ts)
+- [x] Task: Implement configurable number of notes pages at end
 
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Complete Page Generators' (Protocol in workflow.md)
 

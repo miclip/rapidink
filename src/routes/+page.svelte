@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { DEVICES, getDevicesByCategory } from '$lib/devices';
 	import { DEFAULT_CONFIG, type RapidInkConfig, type Habit, type Collection, type NavigationLink } from '$lib/config';
-	import { generatePDF, type GeneratorProgress } from '$lib/pdf/generator';
+	import type { GeneratorProgress } from '$lib/pdf/generator';
 
 	let config: RapidInkConfig = { ...DEFAULT_CONFIG };
 	let generating = false;
@@ -19,6 +19,8 @@
 		pdfUrl = null;
 
 		try {
+			// Dynamic import to avoid blocking page load
+			const { generatePDF } = await import('$lib/pdf/generator');
 			const pdfBytes = await generatePDF(config, (p) => {
 				progress = p;
 			});
