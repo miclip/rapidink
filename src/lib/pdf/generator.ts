@@ -686,11 +686,23 @@ function addFutureLogPages(ctx: GeneratorContext) {
 		const yPos = y - row * monthHeight;
 
 		const monthName = dayjs().month(i).format('MMMM');
+		const textWidth = boldFont.widthOfTextAtSize(monthName, 12);
+
 		page1.drawText(monthName, {
 			x,
 			y: yPos,
 			size: 12,
 			font: boldFont
+		});
+
+		// Add pending link to month page
+		ctx.pendingLinks.push({
+			page: page1,
+			x,
+			y: yPos - 4,
+			width: textWidth,
+			height: 20,
+			targetAnchor: `month-${i}-timeline`
 		});
 
 		page1.drawLine({
@@ -713,11 +725,23 @@ function addFutureLogPages(ctx: GeneratorContext) {
 		const yPos = y - row * monthHeight;
 
 		const monthName = dayjs().month(i).format('MMMM');
+		const textWidth = boldFont.widthOfTextAtSize(monthName, 12);
+
 		page2.drawText(monthName, {
 			x,
 			y: yPos,
 			size: 12,
 			font: boldFont
+		});
+
+		// Add pending link to month page
+		ctx.pendingLinks.push({
+			page: page2,
+			x,
+			y: yPos - 4,
+			width: textWidth,
+			height: 20,
+			targetAnchor: `month-${i}-timeline`
 		});
 
 		page2.drawLine({

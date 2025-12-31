@@ -78,10 +78,10 @@
 ### Task 3.1: Wire All Navigation Links
 - [~] Task: Write integration tests for navigation link functionality (deferred - manual testing)
 - [x] Task: Connect header navigation to section pages `4555388`
-- [~] Task: Connect monthly calendar dates to daily pages (Phase 4)
-- [~] Task: Connect weekly days to daily pages (Phase 4)
-- [~] Task: Connect index entries to respective pages (Phase 4)
-- [~] Task: Connect collection index to collection pages (Phase 4)
+- [x] Task: Connect monthly calendar dates to daily pages `814fa26`
+- [~] Task: Connect weekly days to daily pages (deferred - weekly pages don't show individual days)
+- [x] Task: Connect index entries to respective pages `13ce157`
+- [x] Task: Connect collection index to collection pages `13ce157`
 
 ### Task 3.2: Navigation Testing
 - [ ] Task: Test navigation on exported PDF in browser
