@@ -459,79 +459,82 @@ function addIndexPages(ctx: GeneratorContext) {
 
 	y -= lineHeight;
 
-	// Monthly links (only show months that exist)
+	// Monthly & Weekly combined - shows weeks within each month
 	if (config.enableMonthlyPages) {
-		page.drawText('Monthly', {
+		page.drawText('Monthly / Weekly', {
 			x: margins.left,
 			y,
 			size: 14,
 			font: boldFont
 		});
-		y -= lineHeight * 1.5;
+		y -= lineHeight * 1.2;
+
+		const colWidth = (pageWidth - margins.left - margins.right) / 3;
 
 		for (let month = 0; month < monthCount; month++) {
-			const monthName = dayjs().month(month).format('MMMM');
-			const linkText = `> ${monthName}`;
-			const textWidth = font.widthOfTextAtSize(linkText, 12);
-			const xPos = margins.left + 10 + (month % 3) * 120;
-			const yPos = y - Math.floor(month / 3) * lineHeight;
+			const monthDate = dayjs(`${config.year}-${month + 1}-01`);
+			const monthName = monthDate.format('MMM');
+			const col = month % 3;
+			const row = Math.floor(month / 3);
+			const xPos = margins.left + col * colWidth;
+			const yPos = y - row * (lineHeight * 2.5);
 
-			page.drawText(linkText, {
+			// Month name (link to monthly page)
+			const monthTextWidth = boldFont.widthOfTextAtSize(monthName, 11);
+			page.drawText(monthName, {
 				x: xPos,
 				y: yPos,
-				size: 12,
-				font
+				size: 11,
+				font: boldFont
 			});
 
 			ctx.pendingLinks.push({
 				page,
 				x: xPos,
 				y: yPos - 4,
-				width: textWidth,
+				width: monthTextWidth,
 				height: lineHeight,
 				targetAnchor: `month-${month}-timeline`
 			});
+
+			// Week numbers for this month (if weekly pages enabled)
+			if (config.enableWeeklyPages) {
+				const firstDayOfMonth = monthDate.startOf('month');
+				const lastDayOfMonth = monthDate.endOf('month');
+				const firstWeek = config.weekStart === 'monday' ? firstDayOfMonth.isoWeek() : firstDayOfMonth.week();
+				const lastWeek = config.weekStart === 'monday' ? lastDayOfMonth.isoWeek() : lastDayOfMonth.week();
+
+				// Handle year wrap (December week 1)
+				const weekStart = firstWeek;
+				const weekEnd = lastWeek < firstWeek ? (config.weekStart === 'monday' ? 52 : 53) : lastWeek;
+
+				let weekX = xPos + monthTextWidth + 8;
+				for (let week = weekStart; week <= weekEnd; week++) {
+					const weekText = `${week}`;
+					const weekTextWidth = font.widthOfTextAtSize(weekText, 9);
+
+					page.drawText(weekText, {
+						x: weekX,
+						y: yPos,
+						size: 9,
+						font,
+						color: rgb(0.4, 0.4, 0.4)
+					});
+
+					ctx.pendingLinks.push({
+						page,
+						x: weekX - 2,
+						y: yPos - 4,
+						width: weekTextWidth + 4,
+						height: lineHeight,
+						targetAnchor: `week-${week}-action`
+					});
+
+					weekX += weekTextWidth + 6;
+				}
+			}
 		}
-		y -= Math.ceil(monthCount / 3) * lineHeight + lineHeight;
-	}
-
-	// Weekly links (only if weekly pages enabled)
-	if (config.enableWeeklyPages) {
-		page.drawText('Weekly', {
-			x: margins.left,
-			y,
-			size: 14,
-			font: boldFont
-		});
-		y -= lineHeight * 1.5;
-
-		const weeksInYear = getWeeksInYear(config.year, config.weekStart);
-		const cols = 10;
-		for (let week = 1; week <= weeksInYear; week++) {
-			const col = (week - 1) % cols;
-			const row = Math.floor((week - 1) / cols);
-			const weekText = `${week}`;
-			const textWidth = font.widthOfTextAtSize(weekText, 10);
-			const xPos = margins.left + 10 + col * 40;
-			const yPos = y - row * lineHeight;
-
-			page.drawText(weekText, {
-				x: xPos,
-				y: yPos,
-				size: 10,
-				font
-			});
-
-			ctx.pendingLinks.push({
-				page,
-				x: xPos,
-				y: yPos - 4,
-				width: Math.max(textWidth, 20),
-				height: lineHeight,
-				targetAnchor: `week-${week}-action`
-			});
-		}
-		y -= Math.ceil(weeksInYear / cols) * lineHeight + lineHeight;
+		y -= Math.ceil(monthCount / 3) * (lineHeight * 2.5) + lineHeight;
 	}
 
 	// Daily index (only if daily pages enabled) - separate page(s)
