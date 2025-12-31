@@ -409,11 +409,12 @@ function addIndexPages(ctx: GeneratorContext) {
 	const page = addPage(ctx, 'index');
 	drawHeader(page, ctx, 'Index', []);
 
-	const { font, boldFont, margins, pageHeight, config } = ctx;
+	const { font, boldFont, margins, pageHeight, pageWidth, config } = ctx;
 	let y = pageHeight - margins.top - 50;
-	const lineHeight = 20;
+	const lineHeight = 18;
+	const monthCount = config.sampleMonthCount && config.sampleMonthCount > 0 ? config.sampleMonthCount : 12;
 
-	// Index A - Main sections
+	// Quick Navigation - Main sections
 	page.drawText('Quick Navigation', {
 		x: margins.left,
 		y,
@@ -443,7 +444,6 @@ function addIndexPages(ctx: GeneratorContext) {
 				font
 			});
 
-			// Add pending link to section
 			ctx.pendingLinks.push({
 				page,
 				x: margins.left + 10,
@@ -459,76 +459,156 @@ function addIndexPages(ctx: GeneratorContext) {
 
 	y -= lineHeight;
 
-	// Monthly links
-	page.drawText('Monthly', {
-		x: margins.left,
-		y,
-		size: 14,
-		font: boldFont
-	});
-	y -= lineHeight * 1.5;
-
-	for (let month = 0; month < 12; month++) {
-		const monthName = dayjs().month(month).format('MMMM');
-		const linkText = `> ${monthName}`;
-		const textWidth = font.widthOfTextAtSize(linkText, 12);
-		const xPos = margins.left + 10 + (month % 3) * 120;
-		const yPos = y - Math.floor(month / 3) * lineHeight;
-
-		page.drawText(linkText, {
-			x: xPos,
-			y: yPos,
-			size: 12,
-			font
+	// Monthly links (only show months that exist)
+	if (config.enableMonthlyPages) {
+		page.drawText('Monthly', {
+			x: margins.left,
+			y,
+			size: 14,
+			font: boldFont
 		});
+		y -= lineHeight * 1.5;
 
-		// Add pending link to month page
-		ctx.pendingLinks.push({
-			page,
-			x: xPos,
-			y: yPos - 4,
-			width: textWidth,
-			height: lineHeight,
-			targetAnchor: `month-${month}-timeline`
-		});
+		for (let month = 0; month < monthCount; month++) {
+			const monthName = dayjs().month(month).format('MMMM');
+			const linkText = `> ${monthName}`;
+			const textWidth = font.widthOfTextAtSize(linkText, 12);
+			const xPos = margins.left + 10 + (month % 3) * 120;
+			const yPos = y - Math.floor(month / 3) * lineHeight;
+
+			page.drawText(linkText, {
+				x: xPos,
+				y: yPos,
+				size: 12,
+				font
+			});
+
+			ctx.pendingLinks.push({
+				page,
+				x: xPos,
+				y: yPos - 4,
+				width: textWidth,
+				height: lineHeight,
+				targetAnchor: `month-${month}-timeline`
+			});
+		}
+		y -= Math.ceil(monthCount / 3) * lineHeight + lineHeight;
 	}
-	y -= Math.ceil(12 / 3) * lineHeight + lineHeight;
 
-	// Weekly links (abbreviated)
-	page.drawText('Weekly', {
-		x: margins.left,
-		y,
-		size: 14,
-		font: boldFont
-	});
-	y -= lineHeight * 1.5;
-
-	const weeksInYear = getWeeksInYear(config.year, config.weekStart);
-	const cols = 10;
-	for (let week = 1; week <= weeksInYear; week++) {
-		const col = (week - 1) % cols;
-		const row = Math.floor((week - 1) / cols);
-		const weekText = `${week}`;
-		const textWidth = font.widthOfTextAtSize(weekText, 10);
-		const xPos = margins.left + 10 + col * 40;
-		const yPos = y - row * lineHeight;
-
-		page.drawText(weekText, {
-			x: xPos,
-			y: yPos,
-			size: 10,
-			font
+	// Weekly links (only if weekly pages enabled)
+	if (config.enableWeeklyPages) {
+		page.drawText('Weekly', {
+			x: margins.left,
+			y,
+			size: 14,
+			font: boldFont
 		});
+		y -= lineHeight * 1.5;
 
-		// Add pending link to week page
-		ctx.pendingLinks.push({
-			page,
-			x: xPos,
-			y: yPos - 4,
-			width: Math.max(textWidth, 20), // Min touch target width
-			height: lineHeight,
-			targetAnchor: `week-${week}-action`
-		});
+		const weeksInYear = getWeeksInYear(config.year, config.weekStart);
+		const cols = 10;
+		for (let week = 1; week <= weeksInYear; week++) {
+			const col = (week - 1) % cols;
+			const row = Math.floor((week - 1) / cols);
+			const weekText = `${week}`;
+			const textWidth = font.widthOfTextAtSize(weekText, 10);
+			const xPos = margins.left + 10 + col * 40;
+			const yPos = y - row * lineHeight;
+
+			page.drawText(weekText, {
+				x: xPos,
+				y: yPos,
+				size: 10,
+				font
+			});
+
+			ctx.pendingLinks.push({
+				page,
+				x: xPos,
+				y: yPos - 4,
+				width: Math.max(textWidth, 20),
+				height: lineHeight,
+				targetAnchor: `week-${week}-action`
+			});
+		}
+		y -= Math.ceil(weeksInYear / cols) * lineHeight + lineHeight;
+	}
+
+	// Daily index (only if daily pages enabled) - separate page(s)
+	if (config.enableDailyPages) {
+		addDailyIndexPages(ctx, monthCount);
+	}
+}
+
+function addDailyIndexPages(ctx: GeneratorContext, monthCount: number) {
+	const { font, boldFont, margins, pageHeight, config } = ctx;
+	const lineHeight = 16;
+	const colWidth = 35;
+	const rowsPerPage = Math.floor((pageHeight - margins.top - margins.bottom - 80) / lineHeight);
+
+	// Generate one page per month for the daily index
+	for (let month = 0; month < monthCount; month++) {
+		const monthDate = dayjs(`${config.year}-${month + 1}-01`);
+		const monthName = monthDate.format('MMMM');
+		const daysInMonth = monthDate.daysInMonth();
+		const anchor = month === 0 ? 'daily-index' : `daily-index-${month}`;
+
+		const page = addPage(ctx, anchor);
+		drawHeader(page, ctx, `Daily Index - ${monthName}`, [], { habits: month === 0 ? 'habits' : `habits-${month}` });
+
+		let y = pageHeight - margins.top - 60;
+
+		// Draw calendar-style grid of day numbers
+		const cols = 7;
+		const startDayOfWeek = monthDate.day(); // 0 = Sunday
+
+		// Day of week headers
+		const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+		for (let i = 0; i < 7; i++) {
+			page.drawText(dayNames[i], {
+				x: margins.left + i * colWidth + 10,
+				y,
+				size: 10,
+				font: boldFont,
+				color: rgb(0.5, 0.5, 0.5)
+			});
+		}
+		y -= lineHeight * 1.5;
+
+		// Day numbers in calendar grid
+		let dayNum = 1;
+		let row = 0;
+		while (dayNum <= daysInMonth) {
+			for (let col = 0; col < 7 && dayNum <= daysInMonth; col++) {
+				// Skip cells before the 1st of the month
+				if (row === 0 && col < startDayOfWeek) continue;
+
+				const date = monthDate.date(dayNum);
+				const dateStr = date.format('YYYY-MM-DD');
+				const xPos = margins.left + col * colWidth + 10;
+				const yPos = y - row * lineHeight;
+
+				page.drawText(`${dayNum}`, {
+					x: xPos,
+					y: yPos,
+					size: 11,
+					font
+				});
+
+				// Add link to daily page
+				ctx.pendingLinks.push({
+					page,
+					x: xPos - 5,
+					y: yPos - 4,
+					width: colWidth - 5,
+					height: lineHeight,
+					targetAnchor: `day-${dateStr}`
+				});
+
+				dayNum++;
+			}
+			row++;
+		}
 	}
 }
 
