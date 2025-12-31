@@ -13,9 +13,9 @@
 - [x] Task: Add touch-friendly hit-box sizing (minimum 44x44pt targets) `0f3f640`
 
 ### Task 1.3: Page Reference System
-- [~] Task: Write tests for page reference tracking
-- [ ] Task: Implement page index registry to track page numbers during generation
-- [ ] Task: Update all page generators to register their page indices
+- [x] Task: Write tests for page reference tracking `15985d7`
+- [x] Task: Implement page index registry to track page numbers during generation
+- [x] Task: Update all page generators to register their page indices
 
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: PDF Link Annotations Infrastructure' (Protocol in workflow.md)
 

@@ -5,15 +5,11 @@ import isoWeek from 'dayjs/plugin/isoWeek';
 import dayOfYear from 'dayjs/plugin/dayOfYear';
 import type { RapidInkConfig } from '../config';
 import { DEVICES, pxToPoints, getContentWidth } from '../devices';
+import { PageRegistry } from './links';
 
 dayjs.extend(weekOfYear);
 dayjs.extend(isoWeek);
 dayjs.extend(dayOfYear);
-
-interface PageRef {
-	pageIndex: number;
-	anchor: string;
-}
 
 interface GeneratorContext {
 	doc: PDFDocument;
@@ -24,7 +20,7 @@ interface GeneratorContext {
 	pageHeight: number;
 	contentWidth: number;
 	margins: { top: number; right: number; bottom: number; left: number };
-	pageRefs: Map<string, PageRef>;
+	registry: PageRegistry;
 	currentPageIndex: number;
 }
 
@@ -67,7 +63,7 @@ export async function generatePDF(
 		pageHeight,
 		contentWidth,
 		margins,
-		pageRefs: new Map(),
+		registry: new PageRegistry(),
 		currentPageIndex: 0
 	};
 
@@ -176,7 +172,7 @@ export async function generatePDF(
 function addPage(ctx: GeneratorContext, anchor?: string): PDFPage {
 	const page = ctx.doc.addPage([ctx.pageWidth, ctx.pageHeight]);
 	if (anchor) {
-		ctx.pageRefs.set(anchor, { pageIndex: ctx.currentPageIndex, anchor });
+		ctx.registry.registerPage(anchor, page, ctx.currentPageIndex);
 	}
 	ctx.currentPageIndex++;
 	return page;
