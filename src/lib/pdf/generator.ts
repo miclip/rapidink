@@ -5,11 +5,31 @@ import isoWeek from 'dayjs/plugin/isoWeek';
 import dayOfYear from 'dayjs/plugin/dayOfYear';
 import type { RapidInkConfig } from '../config';
 import { DEVICES, pxToPoints, getContentWidth } from '../devices';
-import { PageRegistry } from './links';
+import { PageRegistry, createInternalLink } from './links';
+
+// Navigation icon mappings (short labels for nav bar)
+const NAV_ICONS: Record<string, string> = {
+	'index': 'Idx',
+	'monthly': 'Mo',
+	'weekly': 'Wk',
+	'intention': 'Int',
+	'goals': 'Go',
+	'habits': 'Hab',
+	'collections': 'Col'
+};
 
 dayjs.extend(weekOfYear);
 dayjs.extend(isoWeek);
 dayjs.extend(dayOfYear);
+
+interface PendingLink {
+	page: PDFPage;
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+	targetAnchor: string;
+}
 
 interface GeneratorContext {
 	doc: PDFDocument;
@@ -22,6 +42,7 @@ interface GeneratorContext {
 	margins: { top: number; right: number; bottom: number; left: number };
 	registry: PageRegistry;
 	currentPageIndex: number;
+	pendingLinks: PendingLink[];
 }
 
 export interface GeneratorProgress {
@@ -64,7 +85,8 @@ export async function generatePDF(
 		contentWidth,
 		margins,
 		registry: new PageRegistry(),
-		currentPageIndex: 0
+		currentPageIndex: 0,
+		pendingLinks: []
 	};
 
 	const report = (phase: string, current: number, total: number, message: string) => {
@@ -103,6 +125,13 @@ export async function generatePDF(
 		for (let month = 0; month < 12; month++) {
 			report('monthly', month + 1, 12, `Generating ${dayjs().month(month).format('MMMM')}...`);
 			addMonthlyPages(ctx, month);
+			// Register 'monthly' alias pointing to first month
+			if (month === 0) {
+				const firstMonthPage = ctx.registry.getPage('month-0-timeline');
+				if (firstMonthPage) {
+					ctx.registry.registerPage('monthly', firstMonthPage, ctx.registry.getPageIndex('month-0-timeline')!);
+				}
+			}
 		}
 	}
 
@@ -116,6 +145,13 @@ export async function generatePDF(
 		for (let week = 1; week <= weeksInYear; week++) {
 			report('weekly', week, weeksInYear, `Generating week ${week}...`);
 			addWeeklyPages(ctx, week);
+			// Register 'weekly' alias pointing to first week
+			if (week === 1) {
+				const firstWeekPage = ctx.registry.getPage('week-1-action');
+				if (firstWeekPage) {
+					ctx.registry.registerPage('weekly', firstWeekPage, ctx.registry.getPageIndex('week-1-action')!);
+				}
+			}
 		}
 	}
 
@@ -145,9 +181,21 @@ export async function generatePDF(
 		}
 	}
 
-	// Phase 2: Add navigation links (second pass)
+	// Phase 2: Add navigation links (second pass - now all pages exist)
 	report('links', 0, 1, 'Adding navigation links...');
-	// Links are added inline during page generation using pageRefs
+	for (const pendingLink of ctx.pendingLinks) {
+		const targetPage = ctx.registry.getPage(pendingLink.targetAnchor);
+		if (targetPage) {
+			await createInternalLink(doc, pendingLink.page, {
+				x: pendingLink.x,
+				y: pendingLink.y,
+				width: pendingLink.width,
+				height: pendingLink.height,
+				targetAnchor: pendingLink.targetAnchor,
+				registry: ctx.registry
+			});
+		}
+	}
 
 	// Embed config as attachment
 	report('finalize', 0, 1, 'Embedding configuration...');
@@ -242,35 +290,76 @@ function drawHeader(
 ) {
 	const { font, boldFont, margins, pageWidth, pageHeight, config } = ctx;
 	const y = pageHeight - margins.top;
+	const navFontSize = 9;
+	const linkHeight = 20; // Touch-friendly height
+	const navGap = 3;
 
-	// Title
-	page.drawText(title, {
+	// Calculate nav width first to reserve space
+	const enabledLinks = config.navigationLinks.filter(l => l.enabled);
+	let totalNavWidth = 0;
+	for (const link of enabledLinks) {
+		const icon = NAV_ICONS[link.id] || link.label.substring(0, 3);
+		const linkWidth = Math.max(font.widthOfTextAtSize(icon, navFontSize) + 8, 30);
+		totalNavWidth += linkWidth + navGap;
+	}
+
+	// Title (left side, with max width to avoid overlap)
+	const maxTitleWidth = pageWidth - margins.left - margins.right - totalNavWidth - 20;
+	let displayTitle = title;
+	let titleWidth = boldFont.widthOfTextAtSize(displayTitle, 16);
+
+	// Truncate title if too long
+	while (titleWidth > maxTitleWidth && displayTitle.length > 10) {
+		displayTitle = displayTitle.substring(0, displayTitle.length - 4) + '...';
+		titleWidth = boldFont.widthOfTextAtSize(displayTitle, 16);
+	}
+
+	page.drawText(displayTitle, {
 		x: margins.left,
 		y,
-		size: 18,
+		size: 16,
 		font: boldFont,
 		color: rgb(0, 0, 0)
 	});
 
-	// Navigation links (right side)
+	// Navigation icons (right-aligned) - store pending links for second pass
 	let navX = pageWidth - margins.right;
-	const enabledLinks = config.navigationLinks.filter(l => l.enabled);
 
 	for (let i = enabledLinks.length - 1; i >= 0; i--) {
 		const link = enabledLinks[i];
-		const linkWidth = font.widthOfTextAtSize(`< ${link.label}`, 10);
-		navX -= linkWidth + 15;
+		const icon = NAV_ICONS[link.id] || link.label.substring(0, 3);
+		const linkWidth = Math.max(font.widthOfTextAtSize(icon, navFontSize) + 8, 30);
+		navX -= linkWidth;
 
-		page.drawText(`< ${link.label}`, {
-			x: navX,
-			y,
-			size: 10,
+		// Draw icon text
+		page.drawText(icon, {
+			x: navX + 4,
+			y: y + 2,
+			size: navFontSize,
 			font,
-			color: rgb(0.3, 0.3, 0.3)
+			color: rgb(0.4, 0.4, 0.4)
 		});
-		// Note: pdf-lib doesn't support internal links directly in the same way
-		// We'd need to use annotations - simplified for now
+
+		// Store pending link for second pass (after all pages exist)
+		ctx.pendingLinks.push({
+			page,
+			x: navX,
+			y: y - 5,
+			width: linkWidth,
+			height: linkHeight,
+			targetAnchor: link.id
+		});
+
+		navX -= navGap;
 	}
+
+	// Draw separator line below header
+	page.drawLine({
+		start: { x: margins.left, y: y - 12 },
+		end: { x: pageWidth - margins.right, y: y - 12 },
+		thickness: 0.5,
+		color: rgb(0.8, 0.8, 0.8)
+	});
 }
 
 function addCoverPage(ctx: GeneratorContext) {
