@@ -28,6 +28,15 @@ export const DEVICES: Record<string, DevicePreset> = {
 		description: '11.8" color digital note-taking device',
 		category: 'eink'
 	},
+	'remarkable-paper-pro-move': {
+		name: 'reMarkable Paper Pro Move',
+		width: 1696,
+		height: 954,
+		dpi: 264,
+		toolbarWidth: 28,
+		description: '7.3" color ultraportable device',
+		category: 'eink'
+	},
 
 	// Supernote family
 	'supernote-a5x': {

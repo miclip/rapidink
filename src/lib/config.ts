@@ -121,7 +121,8 @@ export const DEFAULT_NAVIGATION_LINKS: NavigationLink[] = [
 	{ id: 'intention', label: 'Intention', enabled: false },
 	{ id: 'goals', label: 'Goals', enabled: false },
 	{ id: 'habits', label: 'Habits', enabled: false },
-	{ id: 'collections', label: 'Collections', enabled: false }
+	{ id: 'collections', label: 'Collections', enabled: false },
+	{ id: 'notes', label: 'Notes', enabled: false }
 ];
 
 export const DEFAULT_CONFIG: RapidInkConfig = {

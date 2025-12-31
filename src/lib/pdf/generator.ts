@@ -15,7 +15,8 @@ const NAV_ICONS: Record<string, string> = {
 	'intention': 'Int',
 	'goals': 'Go',
 	'habits': 'Hab',
-	'collections': 'Col'
+	'collections': 'Col',
+	'notes': 'Not'
 };
 
 dayjs.extend(weekOfYear);
@@ -33,6 +34,23 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
 		};
 	}
 	return { r: 0, g: 0, b: 0 }; // Default to black
+}
+
+// Color helpers using context colors
+function textColor(ctx: GeneratorContext) {
+	const c = ctx.textColor;
+	return rgb(c.r, c.g, c.b);
+}
+
+function lineColor(ctx: GeneratorContext) {
+	const c = ctx.lineColor;
+	return rgb(c.r * ctx.lineOpacity, c.g * ctx.lineOpacity, c.b * ctx.lineOpacity);
+}
+
+function mutedTextColor(ctx: GeneratorContext, opacity: number = 0.5) {
+	const c = ctx.textColor;
+	// Blend toward white based on opacity
+	return rgb(1 - (1 - c.r) * opacity, 1 - (1 - c.g) * opacity, 1 - (1 - c.b) * opacity);
 }
 
 interface PendingLink {
@@ -259,7 +277,7 @@ function drawDotGrid(page: PDFPage, ctx: GeneratorContext) {
 	if (config.dotStyle === 'blank') return;
 
 	const spacing = (config.dotSpacing / 25.4) * 72; // mm to points
-	const dotColor = rgb(0, 0, 0);
+	const dotColor = textColor(ctx);
 
 	const startX = margins.left;
 	const startY = margins.bottom;
@@ -352,7 +370,7 @@ function drawHeader(
 		y,
 		size: 16,
 		font: boldFont,
-		color: rgb(0, 0, 0)
+		color: textColor(ctx)
 	});
 
 	// Navigation icons (right-aligned) - store pending links for second pass
@@ -371,7 +389,7 @@ function drawHeader(
 				y: y + 2,
 				size: navFontSize,
 				font,
-				color: rgb(0.4, 0.4, 0.4)
+				color: mutedTextColor(ctx, 0.6)
 			});
 
 			// Store pending link for second pass (after all pages exist)
@@ -395,7 +413,7 @@ function drawHeader(
 		start: { x: margins.left, y: y - 12 },
 		end: { x: pageWidth - margins.right, y: y - 12 },
 		thickness: 0.5,
-		color: rgb(0.8, 0.8, 0.8)
+		color: lineColor(ctx)
 	});
 }
 
@@ -419,7 +437,7 @@ function addCoverPage(ctx: GeneratorContext) {
 		y: pageHeight / 2 + 40,
 		size: titleSize,
 		font: boldFont,
-		color: rgb(0, 0, 0)
+		color: textColor(ctx)
 	});
 
 	page.drawText(subtitle, {
@@ -427,7 +445,7 @@ function addCoverPage(ctx: GeneratorContext) {
 		y: pageHeight / 2 - 20,
 		size: subtitleSize,
 		font: boldFont,
-		color: rgb(0.3, 0.3, 0.3)
+		color: mutedTextColor(ctx, 0.7)
 	});
 }
 
@@ -483,7 +501,7 @@ function addIndexPages(ctx: GeneratorContext) {
 		start: { x: margins.left, y: y + lineHeight * 0.5 },
 		end: { x: pageWidth - margins.right, y: y + lineHeight * 0.5 },
 		thickness: 0.5,
-		color: rgb(0.8, 0.8, 0.8)
+		color: lineColor(ctx)
 	});
 	y -= lineHeight;
 
@@ -534,7 +552,7 @@ function addIndexPages(ctx: GeneratorContext) {
 				y,
 				size: 10,
 				font,
-				color: rgb(0.4, 0.4, 0.4)
+				color: mutedTextColor(ctx, 0.6)
 			});
 
 			ctx.pendingLinks.push({
@@ -560,7 +578,7 @@ function addIndexPages(ctx: GeneratorContext) {
 				y,
 				size: 6,
 				font,
-				color: rgb(0.5, 0.5, 0.5)
+				color: mutedTextColor(ctx, 0.5)
 			});
 		}
 
@@ -621,7 +639,7 @@ function addIndexPages(ctx: GeneratorContext) {
 				start: { x: startX - 1, y: y + 8 },
 				end: { x: startX - 1, y: y - 2 },
 				thickness: 0.75,
-				color: rgb(0.5, 0.5, 0.5)
+				color: mutedTextColor(ctx, 0.5)
 			});
 
 			// Week number right after the bar
@@ -630,7 +648,7 @@ function addIndexPages(ctx: GeneratorContext) {
 				y,
 				size: 7,
 				font,
-				color: rgb(0.4, 0.4, 0.4)
+				color: mutedTextColor(ctx, 0.6)
 			});
 
 			// Underline spanning the week
@@ -638,7 +656,7 @@ function addIndexPages(ctx: GeneratorContext) {
 				start: { x: startX + weekNumWidth + 4, y: y + 3 },
 				end: { x: endX, y: y + 3 },
 				thickness: 0.5,
-				color: rgb(0.7, 0.7, 0.7)
+				color: lineColor(ctx)
 			});
 
 			// Add link to weekly page
@@ -663,7 +681,7 @@ function addIndexPages(ctx: GeneratorContext) {
 			start: { x: margins.left, y: y + lineHeight * 0.3 },
 			end: { x: pageWidth - margins.right, y: y + lineHeight * 0.3 },
 			thickness: 0.5,
-			color: rgb(0.85, 0.85, 0.85)
+			color: lineColor(ctx)
 		});
 
 		y -= lineHeight * 0.6;
@@ -793,7 +811,7 @@ function addIntentionPage(ctx: GeneratorContext) {
 			y,
 			size: 10,
 			font,
-			color: rgb(0.4, 0.4, 0.4)
+			color: mutedTextColor(ctx, 0.6)
 		}
 	);
 }
@@ -813,7 +831,7 @@ function addGoalsPage(ctx: GeneratorContext) {
 			y,
 			size: 10,
 			font,
-			color: rgb(0.4, 0.4, 0.4)
+			color: mutedTextColor(ctx, 0.6)
 		}
 	);
 }
@@ -858,7 +876,7 @@ function addFutureLogPages(ctx: GeneratorContext) {
 			start: { x, y: yPos - 5 },
 			end: { x: x + colWidth - 20, y: yPos - 5 },
 			thickness: 0.5,
-			color: rgb(0, 0, 0)
+			color: lineColor(ctx)
 		});
 	}
 
@@ -897,7 +915,7 @@ function addFutureLogPages(ctx: GeneratorContext) {
 			start: { x, y: yPos - 5 },
 			end: { x: x + colWidth - 20, y: yPos - 5 },
 			thickness: 0.5,
-			color: rgb(0, 0, 0)
+			color: lineColor(ctx)
 		});
 	}
 }
@@ -929,7 +947,7 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 			y,
 			size: 10,
 			font,
-			color: isWeekend ? rgb(0.5, 0.5, 0.5) : rgb(0, 0, 0)
+			color: isWeekend ? mutedTextColor(ctx, 0.5) : textColor(ctx)
 		});
 
 		// Add pending link to daily page (only if daily pages enabled)
@@ -949,14 +967,14 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 			y,
 			size: 10,
 			font,
-			color: isWeekend ? rgb(0.5, 0.5, 0.5) : rgb(0, 0, 0)
+			color: isWeekend ? mutedTextColor(ctx, 0.5) : textColor(ctx)
 		});
 
 		timelinePage.drawLine({
 			start: { x: margins.left + 40, y: y - 2 },
 			end: { x: ctx.pageWidth - margins.right, y: y - 2 },
 			thickness: 0.25,
-			color: rgb(0.8, 0.8, 0.8)
+			color: lineColor(ctx)
 		});
 
 		y -= lineHeight;
@@ -1043,7 +1061,7 @@ function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
 				y: circleY,
 				xScale: radius,
 				yScale: radius,
-				borderColor: rgb(0.6, 0.6, 0.6),
+				borderColor: lineColor(ctx),
 				borderWidth: 0.5
 			});
 		}
@@ -1128,7 +1146,7 @@ function addDailyPage(ctx: GeneratorContext, date: dayjs.Dayjs) {
 				y,
 				size: 10,
 				font,
-				color: rgb(0.3, 0.3, 0.3)
+				color: mutedTextColor(ctx, 0.7)
 			});
 			y -= 15;
 		}
@@ -1194,7 +1212,7 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 				start: { x: margins.left + 10, y },
 				end: { x: ctx.pageWidth - margins.right, y },
 				thickness: 0.5,
-				color: rgb(0.8, 0.8, 0.8)
+				color: lineColor(ctx)
 			});
 			y -= lineHeight;
 		}
