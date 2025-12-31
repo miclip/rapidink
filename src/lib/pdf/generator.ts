@@ -1080,11 +1080,15 @@ function addDailyPage(ctx: GeneratorContext, date: dayjs.Dayjs) {
 
 	const weekNumber = config.weekStart === 'monday' ? date.isoWeek() : date.week();
 
-	drawHeader(page, ctx, `${displayDate} ${dayOfWeek}`, [
+	const headerLinks = [
 		{ label: 'Index', anchor: 'index' },
-		{ label: 'Month', anchor: `month-${date.month()}-timeline` },
-		{ label: 'Week', anchor: `week-${weekNumber}-action` }
-	]);
+		{ label: 'Month', anchor: `month-${date.month()}-timeline` }
+	];
+	if (config.enableWeeklyPages) {
+		headerLinks.push({ label: 'Week', anchor: `week-${weekNumber}-action` });
+	}
+
+	drawHeader(page, ctx, `${displayDate} ${dayOfWeek}`, headerLinks);
 
 	drawDotGrid(page, ctx);
 
