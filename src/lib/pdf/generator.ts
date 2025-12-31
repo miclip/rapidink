@@ -294,7 +294,8 @@ function drawHeader(
 	page: PDFPage,
 	ctx: GeneratorContext,
 	title: string,
-	navLinks: Array<{ label: string; anchor: string }>
+	navLinks: Array<{ label: string; anchor: string }>,
+	linkOverrides?: Record<string, string> // Override link targets (e.g., { habits: 'habits-3' })
 ) {
 	const { font, boldFont, margins, pageWidth, pageHeight, config } = ctx;
 	const y = pageHeight - margins.top;
@@ -349,13 +350,15 @@ function drawHeader(
 		});
 
 		// Store pending link for second pass (after all pages exist)
+		// Use override target if provided, otherwise use the link id
+		const targetAnchor = linkOverrides?.[link.id] || link.id;
 		ctx.pendingLinks.push({
 			page,
 			x: navX,
 			y: y - 5,
 			width: linkWidth,
 			height: linkHeight,
-			targetAnchor: link.id
+			targetAnchor
 		});
 
 		navX -= navGap;
@@ -768,7 +771,8 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 
 	// Timeline page
 	const timelinePage = addPage(ctx, `month-${month}-timeline`);
-	drawHeader(timelinePage, ctx, monthName, [{ label: 'Index', anchor: 'index' }]);
+	const habitAnchor = month === 0 ? 'habits' : `habits-${month}`;
+	drawHeader(timelinePage, ctx, monthName, [], { habits: habitAnchor });
 
 	const { font, margins, pageHeight } = ctx;
 	const daysInMonth = monthDate.daysInMonth();
@@ -822,10 +826,7 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 
 	// Action plan page
 	const actionPage = addPage(ctx, `month-${month}-action`);
-	drawHeader(actionPage, ctx, `${monthName} - Action Plan`, [
-		{ label: 'Index', anchor: 'index' },
-		{ label: 'Month', anchor: `month-${month}-timeline` }
-	]);
+	drawHeader(actionPage, ctx, `${monthName} - Action Plan`, [], { habits: habitAnchor });
 	drawDotGrid(actionPage, ctx);
 }
 
