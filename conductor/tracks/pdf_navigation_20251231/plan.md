@@ -13,7 +13,7 @@
 - [x] Task: Add touch-friendly hit-box sizing (minimum 44x44pt targets) `0f3f640`
 
 ### Task 1.3: Page Reference System
-- [ ] Task: Write tests for page reference tracking
+- [~] Task: Write tests for page reference tracking
 - [ ] Task: Implement page index registry to track page numbers during generation
 - [ ] Task: Update all page generators to register their page indices
 

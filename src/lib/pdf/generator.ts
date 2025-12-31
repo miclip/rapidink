@@ -156,8 +156,12 @@ export async function generatePDF(
 	// Embed config as attachment
 	report('finalize', 0, 1, 'Embedding configuration...');
 	const configJson = JSON.stringify(config, null, 2);
+	const configBytes = new TextEncoder().encode(configJson);
+	// Create a clean Uint8Array to ensure pdf-lib compatibility
+	const attachment = new Uint8Array(configBytes.length);
+	attachment.set(configBytes);
 	await doc.attach(
-		new TextEncoder().encode(configJson),
+		attachment,
 		'rapidink-config.json',
 		{
 			mimeType: 'application/json',
@@ -258,10 +262,10 @@ function drawHeader(
 
 	for (let i = enabledLinks.length - 1; i >= 0; i--) {
 		const link = enabledLinks[i];
-		const linkWidth = font.widthOfTextAtSize(`← ${link.label}`, 10);
+		const linkWidth = font.widthOfTextAtSize(`< ${link.label}`, 10);
 		navX -= linkWidth + 15;
 
-		page.drawText(`← ${link.label}`, {
+		page.drawText(`< ${link.label}`, {
 			x: navX,
 			y,
 			size: 10,
@@ -332,7 +336,7 @@ function addIndexPages(ctx: GeneratorContext) {
 
 	for (const section of sections) {
 		if (section.enabled) {
-			page.drawText(`→ ${section.label}`, {
+			page.drawText(`> ${section.label}`, {
 				x: margins.left + 10,
 				y,
 				size: 12,
@@ -355,7 +359,7 @@ function addIndexPages(ctx: GeneratorContext) {
 
 	for (let month = 0; month < 12; month++) {
 		const monthName = dayjs().month(month).format('MMMM');
-		page.drawText(`→ ${monthName}`, {
+		page.drawText(`> ${monthName}`, {
 			x: margins.left + 10 + (month % 3) * 120,
 			y: y - Math.floor(month / 3) * lineHeight,
 			size: 12,
@@ -406,12 +410,12 @@ function addGuidePage(ctx: GeneratorContext) {
 	y -= lineHeight * 1.5;
 
 	const symbols = [
-		{ symbol: '•', meaning: 'Task (incomplete)' },
-		{ symbol: '×', meaning: 'Task (complete)' },
+		{ symbol: '.', meaning: 'Task (incomplete)' },
+		{ symbol: 'x', meaning: 'Task (complete)' },
 		{ symbol: '>', meaning: 'Task (migrated forward)' },
 		{ symbol: '<', meaning: 'Task (scheduled to future)' },
-		{ symbol: '—', meaning: 'Note' },
-		{ symbol: '○', meaning: 'Event' },
+		{ symbol: '-', meaning: 'Note' },
+		{ symbol: 'o', meaning: 'Event' },
 		{ symbol: '=', meaning: 'Mood / Feeling' }
 	];
 
@@ -443,17 +447,17 @@ function addGuidePage(ctx: GeneratorContext) {
 	y -= lineHeight * 1.5;
 
 	const flow = [
-		'Intention → What matters to you',
-		'    ↓',
-		'Goals → Define outcomes',
-		'    ↓',
-		'Future Log → Capture future events/tasks',
-		'    ↓',
-		'Monthly Log → Plan the month',
-		'    ↓',
-		'Weekly Log → Plan & reflect weekly',
-		'    ↓',
-		'Daily Log → Capture daily thoughts'
+		'Intention - What matters to you',
+		'    |',
+		'Goals - Define outcomes',
+		'    |',
+		'Future Log - Capture future events/tasks',
+		'    |',
+		'Monthly Log - Plan the month',
+		'    |',
+		'Weekly Log - Plan & reflect weekly',
+		'    |',
+		'Daily Log - Capture daily thoughts'
 	];
 
 	for (const line of flow) {
@@ -770,7 +774,7 @@ function addDailyPage(ctx: GeneratorContext, date: dayjs.Dayjs) {
 		let y = pageHeight - margins.top - 60;
 
 		for (const event of dayEvents.slice(0, 3)) {
-			page.drawText(`○ ${event.title}`, {
+			page.drawText(`o ${event.title}`, {
 				x: margins.left,
 				y,
 				size: 10,
@@ -801,7 +805,7 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 		y -= lineHeight * 1.5;
 
 		for (const collection of config.collections) {
-			page.drawText(`→ ${collection.name}`, {
+			page.drawText(`> ${collection.name}`, {
 				x: margins.left + 10,
 				y,
 				size: 12,
