@@ -8,9 +8,9 @@
 - [x] Task: Implement `createPageAnchor()` function to register named destinations `93b65f5`
 
 ### Task 1.2: Navigation Header Component
-- [~] Task: Write tests for navigation header generation
-- [ ] Task: Implement `drawNavigationHeader()` with configurable links
-- [ ] Task: Add touch-friendly hit-box sizing (minimum 44x44pt targets)
+- [x] Task: Write tests for navigation header generation `0f3f640`
+- [x] Task: Implement `drawNavigationHeader()` with configurable links `0f3f640`
+- [x] Task: Add touch-friendly hit-box sizing (minimum 44x44pt targets) `0f3f640`
 
 ### Task 1.3: Page Reference System
 - [ ] Task: Write tests for page reference tracking
