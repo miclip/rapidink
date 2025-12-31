@@ -7,11 +7,25 @@
 	let generating = false;
 	let progress: GeneratorProgress | null = null;
 	let pdfUrl: string | null = null;
-	let activeTab = 'general';
+	let isSampleMode = true; // Default to sample mode for review
+
+	// Track which sections are open
+	let openSections: Record<string, boolean> = {
+		general: true,
+		pages: false,
+		daily: false,
+		habits: false,
+		collections: false,
+		visual: false
+	};
 
 	const einkDevices = getDevicesByCategory('eink');
 	const tabletDevices = getDevicesByCategory('tablet');
 	const printDevices = getDevicesByCategory('print');
+
+	function toggleSection(section: string) {
+		openSections[section] = !openSections[section];
+	}
 
 	async function handleGenerate() {
 		generating = true;
@@ -19,9 +33,26 @@
 		pdfUrl = null;
 
 		try {
-			// Dynamic import to avoid blocking page load
 			const { generatePDF } = await import('$lib/pdf/generator');
-			const pdfBytes = await generatePDF(config, (p) => {
+
+			// Create config for generation
+			let genConfig = { ...config };
+
+			if (isSampleMode) {
+				// Sample mode: generate minimal preview
+				// - Keep cover, index, guide if enabled
+				// - Skip weekly and daily pages (too many)
+				// - Keep monthly pages (shows all 12 months as overview)
+				// - Keep habit tracker, collections index, a few notes pages
+				genConfig = {
+					...config,
+					enableWeeklyPages: false, // Too many pages for sample
+					enableDailyPages: false, // Too many pages for sample
+					notesPageCount: Math.min(config.notesPageCount, 3) // Max 3 notes pages in sample
+				};
+			}
+
+			const pdfBytes = await generatePDF(genConfig, (p) => {
 				progress = p;
 			});
 
@@ -39,8 +70,13 @@
 		if (!pdfUrl) return;
 		const a = document.createElement('a');
 		a.href = pdfUrl;
-		a.download = `rapidink-${config.year}.pdf`;
+		a.download = `rapidink-${config.year}${isSampleMode ? '-sample' : ''}.pdf`;
 		a.click();
+	}
+
+	async function handleGenerateFull() {
+		isSampleMode = false;
+		await handleGenerate();
 	}
 
 	function addHabit() {
@@ -70,7 +106,6 @@
 
 		const file = input.files[0];
 		if (file.type === 'application/pdf') {
-			// TODO: Extract config from PDF using pdf-lib
 			alert('PDF config import coming soon!');
 		} else if (file.type === 'application/json') {
 			const text = await file.text();
@@ -101,7 +136,6 @@
 		const file = input.files[0];
 		const text = await file.text();
 
-		// Basic iCal parsing - in production use ical.js library
 		const events: typeof config.events = [];
 		const lines = text.split('\n');
 		let currentEvent: any = null;
@@ -138,21 +172,17 @@
 <div class="grid">
 	<!-- Configuration Panel -->
 	<div class="config-panel">
-		<div class="card">
-			<div class="tabs">
-				<button class="tab" class:active={activeTab === 'general'} on:click={() => activeTab = 'general'}>General</button>
-				<button class="tab" class:active={activeTab === 'pages'} on:click={() => activeTab = 'pages'}>Pages</button>
-				<button class="tab" class:active={activeTab === 'daily'} on:click={() => activeTab = 'daily'}>Daily</button>
-				<button class="tab" class:active={activeTab === 'habits'} on:click={() => activeTab = 'habits'}>Habits</button>
-				<button class="tab" class:active={activeTab === 'collections'} on:click={() => activeTab = 'collections'}>Collections</button>
-				<button class="tab" class:active={activeTab === 'visual'} on:click={() => activeTab = 'visual'}>Visual</button>
-			</div>
-
-			{#if activeTab === 'general'}
-				<div class="tab-content">
+		<div class="accordion">
+			<!-- General Settings -->
+			<div class="accordion-item">
+				<button class="accordion-header" on:click={() => toggleSection('general')}>
+					<span>General Settings</span>
+					<span>{openSections.general ? '-' : '+'}</span>
+				</button>
+				<div class="accordion-content" class:open={openSections.general}>
 					<div class="form-group">
-						<label class="form-label">Device</label>
-						<select bind:value={config.device}>
+						<label class="form-label" for="device-select">Device</label>
+						<select id="device-select" bind:value={config.device}>
 							<optgroup label="Digital Note-Taking Devices">
 								{#each einkDevices as [id, device]}
 									<option value={id}>{device.name}</option>
@@ -175,28 +205,28 @@
 					{#if config.device === 'custom'}
 						<div class="row">
 							<div class="col form-group">
-								<label class="form-label">Width (px)</label>
-								<input type="number" bind:value={config.customWidth} />
+								<label class="form-label" for="custom-width">Width (px)</label>
+								<input id="custom-width" type="number" bind:value={config.customWidth} />
 							</div>
 							<div class="col form-group">
-								<label class="form-label">Height (px)</label>
-								<input type="number" bind:value={config.customHeight} />
+								<label class="form-label" for="custom-height">Height (px)</label>
+								<input id="custom-height" type="number" bind:value={config.customHeight} />
 							</div>
 							<div class="col form-group">
-								<label class="form-label">DPI</label>
-								<input type="number" bind:value={config.customDpi} />
+								<label class="form-label" for="custom-dpi">DPI</label>
+								<input id="custom-dpi" type="number" bind:value={config.customDpi} />
 							</div>
 						</div>
 					{/if}
 
 					<div class="row">
 						<div class="col form-group">
-							<label class="form-label">Year</label>
-							<input type="number" bind:value={config.year} min="2024" max="2030" />
+							<label class="form-label" for="year-input">Year</label>
+							<input id="year-input" type="number" bind:value={config.year} min="2024" max="2030" />
 						</div>
 						<div class="col form-group">
-							<label class="form-label">Week Start</label>
-							<select bind:value={config.weekStart}>
+							<label class="form-label" for="week-start">Week Start</label>
+							<select id="week-start" bind:value={config.weekStart}>
 								<option value="monday">Monday</option>
 								<option value="sunday">Sunday</option>
 							</select>
@@ -205,15 +235,15 @@
 
 					<div class="row">
 						<div class="col form-group">
-							<label class="form-label">Orientation</label>
-							<select bind:value={config.orientation}>
+							<label class="form-label" for="orientation">Orientation</label>
+							<select id="orientation" bind:value={config.orientation}>
 								<option value="portrait">Portrait</option>
 								<option value="landscape">Landscape</option>
 							</select>
 						</div>
 						<div class="col form-group">
-							<label class="form-label">Handedness</label>
-							<select bind:value={config.handedness}>
+							<label class="form-label" for="handedness">Handedness</label>
+							<select id="handedness" bind:value={config.handedness}>
 								<option value="right">Right-handed</option>
 								<option value="left">Left-handed</option>
 							</select>
@@ -221,8 +251,8 @@
 					</div>
 
 					<div class="form-group">
-						<label class="form-label">Date Format</label>
-						<select bind:value={config.dateFormat}>
+						<label class="form-label" for="date-format">Date Format</label>
+						<select id="date-format" bind:value={config.dateFormat}>
 							<option value="short">1/15</option>
 							<option value="medium">Jan 15</option>
 							<option value="long">January 15</option>
@@ -231,15 +261,20 @@
 					</div>
 
 					<div class="form-group mt-2">
-						<label class="form-label">Import Calendar Events</label>
-						<input type="file" accept=".ics,.ical" on:change={handleImportICal} />
+						<label class="form-label" for="ical-import">Import Calendar Events</label>
+						<input id="ical-import" type="file" accept=".ics,.ical" on:change={handleImportICal} />
 						<p class="form-hint">Import from .ics file to auto-populate events on daily pages</p>
 					</div>
 				</div>
-			{/if}
+			</div>
 
-			{#if activeTab === 'pages'}
-				<div class="tab-content">
+			<!-- Page Selection -->
+			<div class="accordion-item">
+				<button class="accordion-header" on:click={() => toggleSection('pages')}>
+					<span>Page Selection</span>
+					<span>{openSections.pages ? '-' : '+'}</span>
+				</button>
+				<div class="accordion-content" class:open={openSections.pages}>
 					<p class="text-muted mb-2">Select which sections to include in your planner:</p>
 
 					<label class="checkbox-label">
@@ -304,8 +339,8 @@
 
 					{#if config.enableNotesPages}
 						<div class="form-group mt-1">
-							<label class="form-label">Number of Notes Pages</label>
-							<input type="number" bind:value={config.notesPageCount} min="0" max="100" />
+							<label class="form-label" for="notes-count">Number of Notes Pages</label>
+							<input id="notes-count" type="number" bind:value={config.notesPageCount} min="0" max="100" />
 						</div>
 					{/if}
 
@@ -320,13 +355,18 @@
 						{/each}
 					</div>
 				</div>
-			{/if}
+			</div>
 
-			{#if activeTab === 'daily'}
-				<div class="tab-content">
+			<!-- Daily Page Settings -->
+			<div class="accordion-item">
+				<button class="accordion-header" on:click={() => toggleSection('daily')}>
+					<span>Daily Page Settings</span>
+					<span>{openSections.daily ? '-' : '+'}</span>
+				</button>
+				<div class="accordion-content" class:open={openSections.daily}>
 					<div class="form-group">
-						<label class="form-label">Daily Page Layout</label>
-						<select bind:value={config.dailyLayout}>
+						<label class="form-label" for="daily-layout">Daily Page Layout</label>
+						<select id="daily-layout" bind:value={config.dailyLayout}>
 							<option value="freeform">Freeform (dot grid only)</option>
 							<option value="timeblocked">Time-blocked (hourly schedule)</option>
 							<option value="split">Split (morning/afternoon/evening)</option>
@@ -337,16 +377,16 @@
 					{#if config.dailyLayout === 'timeblocked' || config.dailyLayout === 'schedule'}
 						<div class="row">
 							<div class="col form-group">
-								<label class="form-label">Start Hour</label>
-								<select bind:value={config.dailyTimeStart}>
+								<label class="form-label" for="time-start">Start Hour</label>
+								<select id="time-start" bind:value={config.dailyTimeStart}>
 									{#each Array(24) as _, i}
 										<option value={i}>{i}:00</option>
 									{/each}
 								</select>
 							</div>
 							<div class="col form-group">
-								<label class="form-label">End Hour</label>
-								<select bind:value={config.dailyTimeEnd}>
+								<label class="form-label" for="time-end">End Hour</label>
+								<select id="time-end" bind:value={config.dailyTimeEnd}>
 									{#each Array(24) as _, i}
 										<option value={i}>{i}:00</option>
 									{/each}
@@ -355,8 +395,8 @@
 						</div>
 
 						<div class="form-group">
-							<label class="form-label">Time Increment</label>
-							<select bind:value={config.dailyTimeIncrement}>
+							<label class="form-label" for="time-increment">Time Increment</label>
+							<select id="time-increment" bind:value={config.dailyTimeIncrement}>
 								<option value={30}>30 minutes</option>
 								<option value={60}>1 hour</option>
 							</select>
@@ -373,26 +413,36 @@
 						Include Monthly Reflection Pages
 					</label>
 				</div>
-			{/if}
+			</div>
 
-			{#if activeTab === 'habits'}
-				<div class="tab-content">
+			<!-- Habits -->
+			<div class="accordion-item">
+				<button class="accordion-header" on:click={() => toggleSection('habits')}>
+					<span>Habits ({config.habits.length})</span>
+					<span>{openSections.habits ? '-' : '+'}</span>
+				</button>
+				<div class="accordion-content" class:open={openSections.habits}>
 					<p class="text-muted mb-2">Define habits to track (leave blank for write-in):</p>
 
 					{#each config.habits as habit, i}
 						<div class="list-item">
 							<span class="text-muted">{i + 1}.</span>
 							<input type="text" bind:value={habit.name} placeholder="Habit name..." />
-							<button class="btn-remove" on:click={() => removeHabit(habit.id)}>×</button>
+							<button class="btn-remove" on:click={() => removeHabit(habit.id)}>x</button>
 						</div>
 					{/each}
 
 					<button class="btn btn-secondary mt-2" on:click={addHabit}>+ Add Habit</button>
 				</div>
-			{/if}
+			</div>
 
-			{#if activeTab === 'collections'}
-				<div class="tab-content">
+			<!-- Collections -->
+			<div class="accordion-item">
+				<button class="accordion-header" on:click={() => toggleSection('collections')}>
+					<span>Collections ({config.collections.length})</span>
+					<span>{openSections.collections ? '-' : '+'}</span>
+				</button>
+				<div class="accordion-content" class:open={openSections.collections}>
 					<p class="text-muted mb-2">Pre-defined collections (generated with pages):</p>
 
 					{#each config.collections as collection}
@@ -404,7 +454,7 @@
 								<div style="width: 80px;">
 									<input type="number" bind:value={collection.pages} min="1" max="50" />
 								</div>
-								<button class="btn-remove" on:click={() => removeCollection(collection.id)}>×</button>
+								<button class="btn-remove" on:click={() => removeCollection(collection.id)}>x</button>
 							</div>
 							<div class="row mt-1">
 								<select bind:value={collection.template} style="width: auto;">
@@ -421,18 +471,23 @@
 					<button class="btn btn-secondary mt-2" on:click={addCollection}>+ Add Collection</button>
 
 					<div class="form-group mt-3">
-						<label class="form-label">Write-in Collection Slots</label>
-						<input type="number" bind:value={config.writeInCollectionSlots} min="0" max="50" />
+						<label class="form-label" for="writein-slots">Write-in Collection Slots</label>
+						<input id="writein-slots" type="number" bind:value={config.writeInCollectionSlots} min="0" max="50" />
 						<p class="form-hint">Blank slots on the collection index for adding collections on-device</p>
 					</div>
 				</div>
-			{/if}
+			</div>
 
-			{#if activeTab === 'visual'}
-				<div class="tab-content">
+			<!-- Visual Settings -->
+			<div class="accordion-item">
+				<button class="accordion-header" on:click={() => toggleSection('visual')}>
+					<span>Visual Settings</span>
+					<span>{openSections.visual ? '-' : '+'}</span>
+				</button>
+				<div class="accordion-content" class:open={openSections.visual}>
 					<div class="form-group">
-						<label class="form-label">Dot Style</label>
-						<select bind:value={config.dotStyle}>
+						<label class="form-label" for="dot-style">Dot Style</label>
+						<select id="dot-style" bind:value={config.dotStyle}>
 							<option value="dots">Dots</option>
 							<option value="grid">Grid Lines</option>
 							<option value="lines">Horizontal Lines</option>
@@ -442,27 +497,27 @@
 
 					<div class="row">
 						<div class="col form-group">
-							<label class="form-label">Dot Spacing (mm)</label>
-							<input type="number" bind:value={config.dotSpacing} min="3" max="10" step="0.5" />
+							<label class="form-label" for="dot-spacing">Dot Spacing (mm)</label>
+							<input id="dot-spacing" type="number" bind:value={config.dotSpacing} min="3" max="10" step="0.5" />
 						</div>
 						<div class="col form-group">
-							<label class="form-label">Dot Size (px)</label>
-							<input type="number" bind:value={config.dotSize} min="0.5" max="3" step="0.5" />
+							<label class="form-label" for="dot-size">Dot Size (px)</label>
+							<input id="dot-size" type="number" bind:value={config.dotSize} min="0.5" max="3" step="0.5" />
 						</div>
 					</div>
 
 					<div class="form-group">
-						<label class="form-label">Dot Opacity</label>
-						<input type="range" bind:value={config.dotOpacity} min="0.1" max="1" step="0.1" />
+						<label class="form-label" for="dot-opacity">Dot Opacity</label>
+						<input id="dot-opacity" type="range" bind:value={config.dotOpacity} min="0.1" max="1" step="0.1" />
 						<span class="text-muted">{Math.round(config.dotOpacity * 100)}%</span>
 					</div>
 
 					<div class="form-group">
-						<label class="form-label">Font Size</label>
-						<input type="number" bind:value={config.fontSize} min="8" max="16" />
+						<label class="form-label" for="font-size">Font Size</label>
+						<input id="font-size" type="number" bind:value={config.fontSize} min="8" max="16" />
 					</div>
 				</div>
-			{/if}
+			</div>
 		</div>
 
 		<div class="card mt-2">
@@ -475,14 +530,31 @@
 			</div>
 		</div>
 
-		<button
-			class="btn btn-primary btn-lg mt-2"
-			style="width: 100%;"
-			on:click={handleGenerate}
-			disabled={generating}
-		>
-			{generating ? 'Generating...' : 'Generate PDF'}
-		</button>
+		<!-- Generation Buttons -->
+		<div class="mt-2">
+			<button
+				class="btn btn-primary btn-lg"
+				style="width: 100%;"
+				on:click={handleGenerate}
+				disabled={generating}
+			>
+				{generating ? 'Generating...' : 'Generate Sample (1 Month Preview)'}
+			</button>
+
+			<button
+				class="btn btn-secondary mt-1"
+				style="width: 100%;"
+				on:click={handleGenerateFull}
+				disabled={generating}
+			>
+				Generate Full Year PDF
+			</button>
+
+			<p class="form-hint text-center mt-1">
+				Sample generates a quick preview without daily pages.<br>
+				Full year includes all 365+ daily pages.
+			</p>
+		</div>
 
 		{#if progress}
 			<div class="progress-container">
@@ -505,14 +577,14 @@
 			{:else}
 				<div class="preview-placeholder">
 					<p>PDF preview will appear here</p>
-					<p class="text-muted">Click "Generate PDF" to create your planner</p>
+					<p class="text-muted">Click "Generate Sample" to create a quick preview</p>
 				</div>
 			{/if}
 		</div>
 
 		{#if pdfUrl}
 			<button class="btn btn-primary btn-lg mt-2" style="width: 100%;" on:click={handleDownload}>
-				Download PDF
+				Download PDF {isSampleMode ? '(Sample)' : ''}
 			</button>
 		{/if}
 	</div>
@@ -524,7 +596,10 @@
 		overflow-y: auto;
 	}
 
-	.tab-content {
-		padding-top: 8px;
+	.accordion-header {
+		width: 100%;
+		text-align: left;
+		border: none;
+		font-size: 14px;
 	}
 </style>
