@@ -160,12 +160,16 @@ export async function generatePDF(
 	}
 
 	if (config.enableDailyPages) {
-		const daysInYear = dayjs(`${config.year}-12-31`).dayOfYear();
-		report('daily', 0, daysInYear, 'Generating daily pages...');
-		for (let day = 1; day <= daysInYear; day++) {
+		// In sample mode, only generate daily pages for the sample months
+		const maxMonth = config.sampleMonthCount && config.sampleMonthCount > 0 ? config.sampleMonthCount - 1 : 11;
+		const lastDate = dayjs(`${config.year}-${maxMonth + 1}-01`).endOf('month');
+		const totalDays = lastDate.dayOfYear();
+
+		report('daily', 0, totalDays, 'Generating daily pages...');
+		for (let day = 1; day <= totalDays; day++) {
 			const date = dayjs(`${config.year}-01-01`).dayOfYear(day);
-			if (day % 30 === 0) {
-				report('daily', day, daysInYear, `Generating ${date.format('MMM D')}...`);
+			if (day % 30 === 0 || totalDays < 60) {
+				report('daily', day, totalDays, `Generating ${date.format('MMM D')}...`);
 			}
 			addDailyPage(ctx, date);
 		}
@@ -835,7 +839,7 @@ function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
 	const anchor = month === 0 ? 'habits' : `habits-${month}`;
 	const page = addPage(ctx, anchor);
 
-	drawHeader(page, ctx, `${monthName} Habits`, [
+	drawHeader(page, ctx, `Habit Tracker ${monthName}`, [
 		{ label: 'Index', anchor: 'index' },
 		{ label: 'Month', anchor: `month-${month}-timeline` }
 	]);
@@ -856,12 +860,28 @@ function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
 	});
 
 	for (let day = 1; day <= daysInMonth; day++) {
+		const dayDate = monthDate.date(day);
+		const dateStr = dayDate.format('YYYY-MM-DD');
+		const xPos = margins.left + habitColWidth + (day - 1) * dayWidth;
+
 		page.drawText(`${day}`, {
-			x: margins.left + habitColWidth + (day - 1) * dayWidth,
+			x: xPos,
 			y,
 			size: 7,
 			font
 		});
+
+		// Add pending link to daily page (if daily pages enabled)
+		if (config.enableDailyPages) {
+			ctx.pendingLinks.push({
+				page,
+				x: xPos,
+				y: y - 4,
+				width: dayWidth,
+				height: rowHeight,
+				targetAnchor: `day-${dateStr}`
+			});
+		}
 	}
 	y -= rowHeight;
 

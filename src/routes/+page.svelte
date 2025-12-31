@@ -39,16 +39,18 @@
 			let genConfig = { ...config };
 
 			if (isSampleMode) {
-				// Sample mode: generate minimal preview
-				// - Keep cover, index, guide if enabled
-				// - Only 1 month instead of all 12
-				// - Skip weekly and daily pages (too many)
-				// - Keep habit tracker (1 month), collections index, a few notes pages
+				// Sample mode: generate preview for first month
+				// - All front matter (cover, index, guide, intention, goals)
+				// - Future log (2 pages)
+				// - 1 month of monthly pages (2 pages)
+				// - 1 month of daily pages (~31 pages)
+				// - 1 month of habit tracker (1 page)
+				// - All collections (year-long)
+				// - A few notes pages
 				genConfig = {
 					...config,
-					sampleMonthCount: 1, // Only generate January for preview
-					enableWeeklyPages: false, // Too many pages for sample
-					enableDailyPages: false, // Too many pages for sample
+					sampleMonthCount: 1, // Only generate first month
+					enableWeeklyPages: false, // Skip weekly pages for sample
 					notesPageCount: Math.min(config.notesPageCount, 3) // Max 3 notes pages in sample
 				};
 			}
