@@ -1,0 +1,193 @@
+import type { DevicePreset } from './devices';
+
+export interface Collection {
+	id: string;
+	name: string;
+	pages: number;
+	template: 'blank' | 'dotgrid' | 'lined' | 'checklist' | 'grid';
+}
+
+export interface Habit {
+	id: string;
+	name: string;
+}
+
+export interface CalendarEvent {
+	date: string; // ISO date string
+	title: string;
+	allDay: boolean;
+	startTime?: string;
+	endTime?: string;
+}
+
+export interface NavigationLink {
+	id: string;
+	label: string;
+	enabled: boolean;
+}
+
+export type DailyPageLayout = 'freeform' | 'timeblocked' | 'split' | 'schedule';
+export type WeekStart = 'sunday' | 'monday';
+export type DateFormat = 'short' | 'medium' | 'long' | 'numeric';
+export type DotStyle = 'dots' | 'grid' | 'lines' | 'blank';
+
+export interface RapidInkConfig {
+	// Version for config migration
+	version: number;
+
+	// Device settings
+	device: string;
+	customWidth?: number;
+	customHeight?: number;
+	customDpi?: number;
+	customToolbarWidth?: number;
+	orientation: 'portrait' | 'landscape';
+	handedness: 'right' | 'left';
+
+	// Calendar settings
+	year: number;
+	weekStart: WeekStart;
+	locale: string;
+	dateFormat: DateFormat;
+
+	// Page enables
+	enableCover: boolean;
+	enableIndex: boolean;
+	enableGuide: boolean;
+	enableIntention: boolean;
+	enableGoals: boolean;
+	enableFutureLog: boolean;
+	enableMonthlyPages: boolean;
+	enableWeeklyPages: boolean;
+	enableDailyPages: boolean;
+	enableHabitTracker: boolean;
+	enableCollections: boolean;
+	enableNotesPages: boolean;
+
+	// Navigation
+	navigationLinks: NavigationLink[];
+
+	// Daily page settings
+	dailyLayout: DailyPageLayout;
+	dailyTimeStart: number; // 0-23
+	dailyTimeEnd: number; // 0-23
+	dailyTimeIncrement: 30 | 60; // minutes
+	weekdayLayout?: DailyPageLayout;
+	weekendLayout?: DailyPageLayout;
+
+	// Habit tracker
+	habits: Habit[];
+
+	// Collections
+	collections: Collection[];
+	writeInCollectionSlots: number;
+
+	// Notes pages at end
+	notesPageCount: number;
+
+	// Visual settings
+	fontFamily: string;
+	fontSize: number;
+	accentColor: string;
+	dotStyle: DotStyle;
+	dotSpacing: number; // mm
+	dotSize: number; // px
+	dotOpacity: number; // 0-1
+
+	// Calendar events (from iCal import)
+	events: CalendarEvent[];
+
+	// Reflection prompts
+	weeklyReflectionEnabled: boolean;
+	monthlyReflectionEnabled: boolean;
+	reflectionPrompts: string[];
+}
+
+export const DEFAULT_NAVIGATION_LINKS: NavigationLink[] = [
+	{ id: 'index', label: 'Index', enabled: true },
+	{ id: 'monthly', label: 'Month', enabled: true },
+	{ id: 'weekly', label: 'Week', enabled: true },
+	{ id: 'intention', label: 'Intention', enabled: false },
+	{ id: 'goals', label: 'Goals', enabled: false },
+	{ id: 'habits', label: 'Habits', enabled: false },
+	{ id: 'collections', label: 'Collections', enabled: false }
+];
+
+export const DEFAULT_CONFIG: RapidInkConfig = {
+	version: 1,
+
+	device: 'remarkable-1-2',
+	orientation: 'portrait',
+	handedness: 'right',
+
+	year: new Date().getFullYear() + 1,
+	weekStart: 'monday',
+	locale: 'en-US',
+	dateFormat: 'medium',
+
+	enableCover: true,
+	enableIndex: true,
+	enableGuide: true,
+	enableIntention: true,
+	enableGoals: true,
+	enableFutureLog: true,
+	enableMonthlyPages: true,
+	enableWeeklyPages: true,
+	enableDailyPages: true,
+	enableHabitTracker: true,
+	enableCollections: true,
+	enableNotesPages: true,
+
+	navigationLinks: DEFAULT_NAVIGATION_LINKS,
+
+	dailyLayout: 'freeform',
+	dailyTimeStart: 6,
+	dailyTimeEnd: 22,
+	dailyTimeIncrement: 60,
+
+	habits: [
+		{ id: '1', name: '' },
+		{ id: '2', name: '' },
+		{ id: '3', name: '' },
+		{ id: '4', name: '' },
+		{ id: '5', name: '' },
+		{ id: '6', name: '' },
+		{ id: '7', name: '' },
+		{ id: '8', name: '' },
+		{ id: '9', name: '' },
+		{ id: '10', name: '' }
+	],
+
+	collections: [],
+	writeInCollectionSlots: 20,
+
+	notesPageCount: 30,
+
+	fontFamily: 'Helvetica',
+	fontSize: 12,
+	accentColor: '#000000',
+	dotStyle: 'dots',
+	dotSpacing: 5,
+	dotSize: 1,
+	dotOpacity: 0.3,
+
+	events: [],
+
+	weeklyReflectionEnabled: true,
+	monthlyReflectionEnabled: true,
+	reflectionPrompts: [
+		'What moved you toward your goals this week?',
+		'What moved you away from your goals?',
+		'What will you do differently next week?'
+	]
+};
+
+export function serializeConfig(config: RapidInkConfig): string {
+	return JSON.stringify(config);
+}
+
+export function deserializeConfig(json: string): RapidInkConfig {
+	const parsed = JSON.parse(json);
+	// TODO: Add version migration logic here
+	return { ...DEFAULT_CONFIG, ...parsed };
+}
