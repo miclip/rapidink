@@ -173,9 +173,10 @@ describe('Daily Pages', () => {
 });
 
 describe('Habit Tracker Pages', () => {
-	it('should create habit tracker page when enabled', async () => {
+	it('should create habit tracker pages for each month when enabled', async () => {
 		const doc = await generateMinimalPDF({ enableHabitTracker: true });
-		expect(doc.getPageCount()).toBe(1);
+		// 12 pages - one habit tracker per month
+		expect(doc.getPageCount()).toBe(12);
 	});
 
 	it('should respect custom habits configuration', async () => {
@@ -187,6 +188,16 @@ describe('Habit Tracker Pages', () => {
 				{ id: '3', name: 'Meditation' }
 			]
 		});
+		// 12 pages - one habit tracker per month
+		expect(doc.getPageCount()).toBe(12);
+	});
+
+	it('should respect sampleMonthCount for preview mode', async () => {
+		const doc = await generateMinimalPDF({
+			enableHabitTracker: true,
+			sampleMonthCount: 1
+		});
+		// Only 1 page in sample mode
 		expect(doc.getPageCount()).toBe(1);
 	});
 });

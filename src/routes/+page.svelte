@@ -41,11 +41,12 @@
 			if (isSampleMode) {
 				// Sample mode: generate minimal preview
 				// - Keep cover, index, guide if enabled
+				// - Only 1 month instead of all 12
 				// - Skip weekly and daily pages (too many)
-				// - Keep monthly pages (shows all 12 months as overview)
-				// - Keep habit tracker, collections index, a few notes pages
+				// - Keep habit tracker (1 month), collections index, a few notes pages
 				genConfig = {
 					...config,
+					sampleMonthCount: 1, // Only generate January for preview
 					enableWeeklyPages: false, // Too many pages for sample
 					enableDailyPages: false, // Too many pages for sample
 					notesPageCount: Math.min(config.notesPageCount, 3) // Max 3 notes pages in sample

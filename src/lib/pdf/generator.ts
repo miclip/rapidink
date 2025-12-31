@@ -121,9 +121,10 @@ export async function generatePDF(
 	}
 
 	if (config.enableMonthlyPages) {
-		report('monthly', 0, 12, 'Generating monthly pages...');
-		for (let month = 0; month < 12; month++) {
-			report('monthly', month + 1, 12, `Generating ${dayjs().month(month).format('MMMM')}...`);
+		const monthCount = config.sampleMonthCount && config.sampleMonthCount > 0 ? config.sampleMonthCount : 12;
+		report('monthly', 0, monthCount, 'Generating monthly pages...');
+		for (let month = 0; month < monthCount; month++) {
+			report('monthly', month + 1, monthCount, `Generating ${dayjs().month(month).format('MMMM')}...`);
 			addMonthlyPages(ctx, month);
 			// Register 'monthly' alias pointing to first month
 			if (month === 0) {
@@ -136,7 +137,10 @@ export async function generatePDF(
 	}
 
 	if (config.enableHabitTracker) {
-		addHabitTrackerPage(ctx);
+		const habitMonthCount = config.sampleMonthCount && config.sampleMonthCount > 0 ? config.sampleMonthCount : 12;
+		for (let month = 0; month < habitMonthCount; month++) {
+			addHabitTrackerPage(ctx, month);
+		}
 	}
 
 	if (config.enableWeeklyPages) {
@@ -821,15 +825,26 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 	drawDotGrid(actionPage, ctx);
 }
 
-function addHabitTrackerPage(ctx: GeneratorContext) {
-	const page = addPage(ctx, 'habits');
-	drawHeader(page, ctx, 'Habit Tracker', [{ label: 'Index', anchor: 'index' }]);
+function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
+	const { config } = ctx;
+	const monthDate = dayjs(`${config.year}-${month + 1}-01`);
+	const monthName = monthDate.format('MMMM');
+	const daysInMonth = monthDate.daysInMonth();
 
-	const { font, boldFont, margins, pageWidth, pageHeight, config } = ctx;
+	// First month gets the 'habits' anchor for navigation
+	const anchor = month === 0 ? 'habits' : `habits-${month}`;
+	const page = addPage(ctx, anchor);
+
+	drawHeader(page, ctx, `${monthName} Habits`, [
+		{ label: 'Index', anchor: 'index' },
+		{ label: 'Month', anchor: `month-${month}-timeline` }
+	]);
+
+	const { font, boldFont, margins, pageWidth, pageHeight } = ctx;
 	let y = pageHeight - margins.top - 60;
 
 	const habitColWidth = 120;
-	const dayWidth = (pageWidth - margins.left - margins.right - habitColWidth) / 31;
+	const dayWidth = (pageWidth - margins.left - margins.right - habitColWidth) / daysInMonth;
 	const rowHeight = 20;
 
 	// Header row with days
@@ -840,7 +855,7 @@ function addHabitTrackerPage(ctx: GeneratorContext) {
 		font: boldFont
 	});
 
-	for (let day = 1; day <= 31; day++) {
+	for (let day = 1; day <= daysInMonth; day++) {
 		page.drawText(`${day}`, {
 			x: margins.left + habitColWidth + (day - 1) * dayWidth,
 			y,
@@ -860,7 +875,7 @@ function addHabitTrackerPage(ctx: GeneratorContext) {
 		});
 
 		// Checkboxes for each day
-		for (let day = 1; day <= 31; day++) {
+		for (let day = 1; day <= daysInMonth; day++) {
 			page.drawRectangle({
 				x: margins.left + habitColWidth + (day - 1) * dayWidth,
 				y: y - 3,

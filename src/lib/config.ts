@@ -68,6 +68,9 @@ export interface RapidInkConfig {
 	enableCollections: boolean;
 	enableNotesPages: boolean;
 
+	// Sample mode - limit pages for preview
+	sampleMonthCount?: number; // 0 or undefined = all 12 months
+
 	// Navigation
 	navigationLinks: NavigationLink[];
 
