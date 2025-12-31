@@ -590,41 +590,36 @@ function addIndexPages(ctx: GeneratorContext) {
 				weekEndDay++;
 			}
 
-			// Draw week indicator with dashes and week number
+			// Draw week indicator with vertical bar, week number, and underline
 			const startX = margins.left + (weekStartDay - 1) * dayWidth;
-			const endX = margins.left + weekEndDay * dayWidth - 4;
-			const midX = (startX + endX) / 2;
+			const endX = margins.left + weekEndDay * dayWidth - 2;
 			const weekNumText = `${weekNum}`;
 			const weekNumWidth = font.widthOfTextAtSize(weekNumText, 7);
 
-			// Left dash
-			if (midX - weekNumWidth / 2 - 4 > startX) {
-				page.drawLine({
-					start: { x: startX, y: y + 4 },
-					end: { x: midX - weekNumWidth / 2 - 4, y: y + 4 },
-					thickness: 0.5,
-					color: rgb(0.6, 0.6, 0.6)
-				});
-			}
-
-			// Week number
-			page.drawText(weekNumText, {
-				x: midX - weekNumWidth / 2,
-				y,
-				size: 7,
-				font,
+			// Vertical bar at start of week
+			page.drawLine({
+				start: { x: startX - 1, y: y + 8 },
+				end: { x: startX - 1, y: y - 2 },
+				thickness: 0.75,
 				color: rgb(0.5, 0.5, 0.5)
 			});
 
-			// Right dash
-			if (endX > midX + weekNumWidth / 2 + 4) {
-				page.drawLine({
-					start: { x: midX + weekNumWidth / 2 + 4, y: y + 4 },
-					end: { x: endX, y: y + 4 },
-					thickness: 0.5,
-					color: rgb(0.6, 0.6, 0.6)
-				});
-			}
+			// Week number right after the bar
+			page.drawText(weekNumText, {
+				x: startX + 2,
+				y,
+				size: 7,
+				font,
+				color: rgb(0.4, 0.4, 0.4)
+			});
+
+			// Underline spanning the week
+			page.drawLine({
+				start: { x: startX + weekNumWidth + 4, y: y + 3 },
+				end: { x: endX, y: y + 3 },
+				thickness: 0.5,
+				color: rgb(0.7, 0.7, 0.7)
+			});
 
 			// Add link to weekly page
 			if (config.enableWeeklyPages) {
@@ -1018,14 +1013,17 @@ function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
 			font
 		});
 
-		// Checkboxes for each day
+		// Circles for each day
 		for (let day = 1; day <= daysInMonth; day++) {
-			page.drawRectangle({
-				x: margins.left + habitColWidth + (day - 1) * dayWidth,
-				y: y - 3,
-				width: dayWidth - 2,
-				height: rowHeight - 4,
-				borderColor: rgb(0.7, 0.7, 0.7),
+			const circleX = margins.left + habitColWidth + (day - 1) * dayWidth + dayWidth / 2 - 1;
+			const circleY = y + (rowHeight - 4) / 2 - 3;
+			const radius = Math.min(dayWidth / 2 - 2, (rowHeight - 4) / 2 - 1);
+			page.drawEllipse({
+				x: circleX,
+				y: circleY,
+				xScale: radius,
+				yScale: radius,
+				borderColor: rgb(0.6, 0.6, 0.6),
 				borderWidth: 0.5
 			});
 		}
