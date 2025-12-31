@@ -27,12 +27,12 @@
 - [x] Task: Add optional user title/subtitle from config `f36c522`
 
 ### Task 2.2: Index Pages
-- [~] Task: Write tests for index page generation
-- [ ] Task: Implement alphabetical index sections (A-Z)
-- [ ] Task: Add page number links to each section
+- [x] Task: Write tests for index page generation `37b1d98`
+- [x] Task: Implement alphabetical index sections (A-Z) `37b1d98`
+- [ ] Task: Add page number links to each section (Phase 3)
 
 ### Task 2.3: Guide/Legend Page
-- [ ] Task: Write tests for guide page generation
+- [~] Task: Write tests for guide page generation
 - [ ] Task: Implement guide page with navigation tips and icon legend
 
 ### Task 2.4: Future Log Pages
