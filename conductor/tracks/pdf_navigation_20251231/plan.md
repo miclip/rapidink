@@ -1,6 +1,6 @@
 # Plan: Complete PDF Generation & Navigation System
 
-## Phase 1: PDF Link Annotations Infrastructure
+## Phase 1: PDF Link Annotations Infrastructure [checkpoint: 5f8c31b]
 
 ### Task 1.1: Create Link Annotation Utility
 - [x] Task: Write tests for PDF link annotation helper functions `93b65f5`
@@ -14,10 +14,10 @@
 
 ### Task 1.3: Page Reference System
 - [x] Task: Write tests for page reference tracking `15985d7`
-- [x] Task: Implement page index registry to track page numbers during generation
-- [x] Task: Update all page generators to register their page indices
+- [x] Task: Implement page index registry to track page numbers during generation `32dc8d8`
+- [x] Task: Update all page generators to register their page indices `32dc8d8`
 
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: PDF Link Annotations Infrastructure' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: PDF Link Annotations Infrastructure' (Protocol in workflow.md) `5f8c31b`
 
 ## Phase 2: Complete Page Generators
 
