@@ -35,6 +35,10 @@ export interface RapidInkConfig {
 	// Version for config migration
 	version: number;
 
+	// Cover page customization
+	coverTitle?: string;
+	coverSubtitle?: string;
+
 	// Device settings
 	device: string;
 	customWidth?: number;

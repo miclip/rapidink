@@ -277,9 +277,10 @@ function addCoverPage(ctx: GeneratorContext) {
 	const page = addPage(ctx, 'cover');
 	const { boldFont, pageWidth, pageHeight, config } = ctx;
 
-	// Center title
-	const title = 'RapidInk';
-	const subtitle = `${config.year} Planner`;
+	// Use custom title or default to year
+	const title = config.coverTitle || `${config.year}`;
+	// Use custom subtitle or default to "Planner" (no branding)
+	const subtitle = config.coverSubtitle || 'Planner';
 
 	const titleSize = 48;
 	const subtitleSize = 24;

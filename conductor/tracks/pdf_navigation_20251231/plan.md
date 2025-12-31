@@ -22,7 +22,7 @@
 ## Phase 2: Complete Page Generators
 
 ### Task 2.1: Cover Page
-- [ ] Task: Write tests for cover page generation
+- [~] Task: Write tests for cover page generation
 - [ ] Task: Implement cover page with year display and minimal design
 - [ ] Task: Add optional user title/subtitle from config
 
