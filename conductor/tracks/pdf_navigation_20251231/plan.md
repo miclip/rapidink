@@ -3,9 +3,9 @@
 ## Phase 1: PDF Link Annotations Infrastructure
 
 ### Task 1.1: Create Link Annotation Utility
-- [~] Task: Write tests for PDF link annotation helper functions
-- [ ] Task: Implement `createInternalLink()` function using pdf-lib annotations
-- [ ] Task: Implement `createPageAnchor()` function to register named destinations
+- [x] Task: Write tests for PDF link annotation helper functions `93b65f5`
+- [x] Task: Implement `createInternalLink()` function using pdf-lib annotations `93b65f5`
+- [x] Task: Implement `createPageAnchor()` function to register named destinations `93b65f5`
 
 ### Task 1.2: Navigation Header Component
 - [ ] Task: Write tests for navigation header generation
