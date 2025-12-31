@@ -422,12 +422,26 @@ function addIndexPages(ctx: GeneratorContext) {
 
 	for (const section of sections) {
 		if (section.enabled) {
-			page.drawText(`> ${section.label}`, {
+			const linkText = `> ${section.label}`;
+			const textWidth = font.widthOfTextAtSize(linkText, 12);
+
+			page.drawText(linkText, {
 				x: margins.left + 10,
 				y,
 				size: 12,
 				font
 			});
+
+			// Add pending link to section
+			ctx.pendingLinks.push({
+				page,
+				x: margins.left + 10,
+				y: y - 4,
+				width: textWidth,
+				height: lineHeight,
+				targetAnchor: section.anchor
+			});
+
 			y -= lineHeight;
 		}
 	}
@@ -445,11 +459,26 @@ function addIndexPages(ctx: GeneratorContext) {
 
 	for (let month = 0; month < 12; month++) {
 		const monthName = dayjs().month(month).format('MMMM');
-		page.drawText(`> ${monthName}`, {
-			x: margins.left + 10 + (month % 3) * 120,
-			y: y - Math.floor(month / 3) * lineHeight,
+		const linkText = `> ${monthName}`;
+		const textWidth = font.widthOfTextAtSize(linkText, 12);
+		const xPos = margins.left + 10 + (month % 3) * 120;
+		const yPos = y - Math.floor(month / 3) * lineHeight;
+
+		page.drawText(linkText, {
+			x: xPos,
+			y: yPos,
 			size: 12,
 			font
+		});
+
+		// Add pending link to month page
+		ctx.pendingLinks.push({
+			page,
+			x: xPos,
+			y: yPos - 4,
+			width: textWidth,
+			height: lineHeight,
+			targetAnchor: `month-${month}-timeline`
 		});
 	}
 	y -= Math.ceil(12 / 3) * lineHeight + lineHeight;
@@ -468,11 +497,26 @@ function addIndexPages(ctx: GeneratorContext) {
 	for (let week = 1; week <= weeksInYear; week++) {
 		const col = (week - 1) % cols;
 		const row = Math.floor((week - 1) / cols);
-		page.drawText(`${week}`, {
-			x: margins.left + 10 + col * 40,
-			y: y - row * lineHeight,
+		const weekText = `${week}`;
+		const textWidth = font.widthOfTextAtSize(weekText, 10);
+		const xPos = margins.left + 10 + col * 40;
+		const yPos = y - row * lineHeight;
+
+		page.drawText(weekText, {
+			x: xPos,
+			y: yPos,
 			size: 10,
 			font
+		});
+
+		// Add pending link to week page
+		ctx.pendingLinks.push({
+			page,
+			x: xPos,
+			y: yPos - 4,
+			width: Math.max(textWidth, 20), // Min touch target width
+			height: lineHeight,
+			targetAnchor: `week-${week}-action`
 		});
 	}
 }
@@ -891,12 +935,26 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 		y -= lineHeight * 1.5;
 
 		for (const collection of config.collections) {
-			page.drawText(`> ${collection.name}`, {
+			const linkText = `> ${collection.name}`;
+			const textWidth = font.widthOfTextAtSize(linkText, 12);
+
+			page.drawText(linkText, {
 				x: margins.left + 10,
 				y,
 				size: 12,
 				font
 			});
+
+			// Add pending link to collection page
+			ctx.pendingLinks.push({
+				page,
+				x: margins.left + 10,
+				y: y - 4,
+				width: textWidth,
+				height: lineHeight,
+				targetAnchor: `collection-${collection.id}`
+			});
+
 			y -= lineHeight;
 		}
 		y -= lineHeight;
