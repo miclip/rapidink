@@ -295,16 +295,20 @@ function drawHeader(
 	ctx: GeneratorContext,
 	title: string,
 	navLinks: Array<{ label: string; anchor: string }>,
-	linkOverrides?: Record<string, string> // Override link targets (e.g., { habits: 'habits-3' })
+	options?: {
+		linkOverrides?: Record<string, string>; // Override link targets (e.g., { habits: 'habits-3' })
+		showNav?: boolean; // Whether to show the navigation bar (default: true)
+	}
 ) {
 	const { font, boldFont, margins, pageWidth, pageHeight, config } = ctx;
 	const y = pageHeight - margins.top;
 	const navFontSize = 9;
 	const linkHeight = 20; // Touch-friendly height
 	const navGap = 3;
+	const showNav = options?.showNav !== false;
 
 	// Calculate nav width first to reserve space
-	const enabledLinks = config.navigationLinks.filter(l => l.enabled);
+	const enabledLinks = showNav ? config.navigationLinks.filter(l => l.enabled) : [];
 	let totalNavWidth = 0;
 	for (const link of enabledLinks) {
 		const icon = NAV_ICONS[link.id] || link.label.substring(0, 3);
@@ -332,36 +336,38 @@ function drawHeader(
 	});
 
 	// Navigation icons (right-aligned) - store pending links for second pass
-	let navX = pageWidth - margins.right;
+	if (showNav) {
+		let navX = pageWidth - margins.right;
 
-	for (let i = enabledLinks.length - 1; i >= 0; i--) {
-		const link = enabledLinks[i];
-		const icon = NAV_ICONS[link.id] || link.label.substring(0, 3);
-		const linkWidth = Math.max(font.widthOfTextAtSize(icon, navFontSize) + 8, 30);
-		navX -= linkWidth;
+		for (let i = enabledLinks.length - 1; i >= 0; i--) {
+			const link = enabledLinks[i];
+			const icon = NAV_ICONS[link.id] || link.label.substring(0, 3);
+			const linkWidth = Math.max(font.widthOfTextAtSize(icon, navFontSize) + 8, 30);
+			navX -= linkWidth;
 
-		// Draw icon text
-		page.drawText(icon, {
-			x: navX + 4,
-			y: y + 2,
-			size: navFontSize,
-			font,
-			color: rgb(0.4, 0.4, 0.4)
-		});
+			// Draw icon text
+			page.drawText(icon, {
+				x: navX + 4,
+				y: y + 2,
+				size: navFontSize,
+				font,
+				color: rgb(0.4, 0.4, 0.4)
+			});
 
-		// Store pending link for second pass (after all pages exist)
-		// Use override target if provided, otherwise use the link id
-		const targetAnchor = linkOverrides?.[link.id] || link.id;
-		ctx.pendingLinks.push({
-			page,
-			x: navX,
-			y: y - 5,
-			width: linkWidth,
-			height: linkHeight,
-			targetAnchor
-		});
+			// Store pending link for second pass (after all pages exist)
+			// Use override target if provided, otherwise use the link id
+			const targetAnchor = options?.linkOverrides?.[link.id] || link.id;
+			ctx.pendingLinks.push({
+				page,
+				x: navX,
+				y: y - 5,
+				width: linkWidth,
+				height: linkHeight,
+				targetAnchor
+			});
 
-		navX -= navGap;
+			navX -= navGap;
+		}
 	}
 
 	// Draw separator line below header
@@ -407,7 +413,7 @@ function addCoverPage(ctx: GeneratorContext) {
 
 function addIndexPages(ctx: GeneratorContext) {
 	let page = addPage(ctx, 'index');
-	drawHeader(page, ctx, 'Index', []);
+	drawHeader(page, ctx, 'Index', [], { showNav: false });
 
 	const { font, boldFont, margins, pageHeight, pageWidth, config } = ctx;
 	let y = pageHeight - margins.top - 50;
@@ -473,7 +479,7 @@ function addIndexPages(ctx: GeneratorContext) {
 		// Check if we need a new page
 		if (y - monthBlockHeight < margins.bottom + 20) {
 			page = addPage(ctx, `index-${month}`);
-			drawHeader(page, ctx, 'Index', []);
+			drawHeader(page, ctx, 'Index', [], { showNav: false });
 			y = pageHeight - margins.top - 50;
 		}
 
@@ -800,7 +806,7 @@ function addGoalsPage(ctx: GeneratorContext) {
 function addFutureLogPages(ctx: GeneratorContext) {
 	// Page 1: Jan-Jun
 	const page1 = addPage(ctx, 'future-log');
-	drawHeader(page1, ctx, 'Future Log', [{ label: 'Index', anchor: 'index' }]);
+	drawHeader(page1, ctx, 'Future Log', [], { showNav: false });
 
 	const { font, boldFont, margins, pageWidth, pageHeight } = ctx;
 	const colWidth = (pageWidth - margins.left - margins.right) / 2;
@@ -843,7 +849,7 @@ function addFutureLogPages(ctx: GeneratorContext) {
 
 	// Page 2: Jul-Dec
 	const page2 = addPage(ctx, 'future-log-2');
-	drawHeader(page2, ctx, 'Future Log', [{ label: 'Index', anchor: 'index' }]);
+	drawHeader(page2, ctx, 'Future Log', [], { showNav: false });
 	y = pageHeight - margins.top - 60;
 
 	for (let i = 6; i < 12; i++) {
@@ -889,7 +895,7 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 	// Timeline page
 	const timelinePage = addPage(ctx, `month-${month}-timeline`);
 	const habitAnchor = month === 0 ? 'habits' : `habits-${month}`;
-	drawHeader(timelinePage, ctx, monthName, [], { habits: habitAnchor });
+	drawHeader(timelinePage, ctx, monthName, [], { linkOverrides: { habits: habitAnchor } });
 
 	const { font, margins, pageHeight } = ctx;
 	const daysInMonth = monthDate.daysInMonth();
@@ -943,7 +949,7 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 
 	// Action plan page
 	const actionPage = addPage(ctx, `month-${month}-action`);
-	drawHeader(actionPage, ctx, `${monthName} - Action Plan`, [], { habits: habitAnchor });
+	drawHeader(actionPage, ctx, `${monthName} - Action Plan`, [], { linkOverrides: { habits: habitAnchor } });
 	drawDotGrid(actionPage, ctx);
 }
 
