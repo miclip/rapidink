@@ -22,6 +22,19 @@ dayjs.extend(weekOfYear);
 dayjs.extend(isoWeek);
 dayjs.extend(dayOfYear);
 
+// Parse hex color to RGB values (0-1 range)
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+	const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+	if (result) {
+		return {
+			r: parseInt(result[1], 16) / 255,
+			g: parseInt(result[2], 16) / 255,
+			b: parseInt(result[3], 16) / 255
+		};
+	}
+	return { r: 0, g: 0, b: 0 }; // Default to black
+}
+
 interface PendingLink {
 	page: PDFPage;
 	x: number;
@@ -43,6 +56,10 @@ interface GeneratorContext {
 	registry: PageRegistry;
 	currentPageIndex: number;
 	pendingLinks: PendingLink[];
+	// Parsed colors for rendering
+	textColor: { r: number; g: number; b: number };
+	lineColor: { r: number; g: number; b: number };
+	lineOpacity: number;
 }
 
 export interface GeneratorProgress {
@@ -86,7 +103,10 @@ export async function generatePDF(
 		margins,
 		registry: new PageRegistry(),
 		currentPageIndex: 0,
-		pendingLinks: []
+		pendingLinks: [],
+		textColor: hexToRgb(config.textColor || '#000000'),
+		lineColor: hexToRgb(config.lineColor || '#666666'),
+		lineOpacity: config.lineOpacity ?? 0.8
 	};
 
 	const report = (phase: string, current: number, total: number, message: string) => {

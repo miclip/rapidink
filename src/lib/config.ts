@@ -92,10 +92,14 @@ export interface RapidInkConfig {
 	// Notes pages at end
 	notesPageCount: number;
 
-	// Visual settings
+	// Visual settings - global styling
 	fontFamily: string;
 	fontSize: number;
-	accentColor: string;
+	textColor: string; // hex color for all text (#000000)
+	lineColor: string; // hex color for all lines/borders (#666666)
+	lineOpacity: number; // 0-1 for lines
+
+	// Dot grid settings
 	dotStyle: DotStyle;
 	dotSpacing: number; // mm
 	dotSize: number; // px
@@ -172,7 +176,9 @@ export const DEFAULT_CONFIG: RapidInkConfig = {
 
 	fontFamily: 'Helvetica',
 	fontSize: 12,
-	accentColor: '#000000',
+	textColor: '#000000',
+	lineColor: '#666666',
+	lineOpacity: 0.8,
 	dotStyle: 'dots',
 	dotSpacing: 5,
 	dotSize: 1,
