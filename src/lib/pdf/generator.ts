@@ -747,14 +747,28 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 		const date = monthDate.date(day);
 		const dayOfWeek = date.format('ddd')[0]; // First letter: M, T, W, etc.
 		const isWeekend = date.day() === 0 || date.day() === 6;
+		const dayText = `${day}`;
+		const dateStr = date.format('YYYY-MM-DD');
 
-		timelinePage.drawText(`${day}`, {
+		timelinePage.drawText(dayText, {
 			x: margins.left,
 			y,
 			size: 10,
 			font,
 			color: isWeekend ? rgb(0.5, 0.5, 0.5) : rgb(0, 0, 0)
 		});
+
+		// Add pending link to daily page (only if daily pages enabled)
+		if (config.enableDailyPages) {
+			ctx.pendingLinks.push({
+				page: timelinePage,
+				x: margins.left,
+				y: y - 4,
+				width: 40, // Cover day number and day letter
+				height: lineHeight,
+				targetAnchor: `day-${dateStr}`
+			});
+		}
 
 		timelinePage.drawText(dayOfWeek, {
 			x: margins.left + 25,
