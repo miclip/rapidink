@@ -406,212 +406,246 @@ function addCoverPage(ctx: GeneratorContext) {
 }
 
 function addIndexPages(ctx: GeneratorContext) {
-	const page = addPage(ctx, 'index');
+	let page = addPage(ctx, 'index');
 	drawHeader(page, ctx, 'Index', []);
 
 	const { font, boldFont, margins, pageHeight, pageWidth, config } = ctx;
 	let y = pageHeight - margins.top - 50;
-	const lineHeight = 18;
+	const lineHeight = 16;
 	const monthCount = config.sampleMonthCount && config.sampleMonthCount > 0 ? config.sampleMonthCount : 12;
+	const contentWidth = pageWidth - margins.left - margins.right;
 
-	// Quick Navigation - Main sections
-	page.drawText('Quick Navigation', {
-		x: margins.left,
-		y,
-		size: 14,
-		font: boldFont
-	});
-	y -= lineHeight * 1.5;
-
+	// Quick Navigation - Main sections (compact horizontal layout)
 	const sections = [
-		{ label: 'Guide & Legend', anchor: 'guide', enabled: config.enableGuide },
+		{ label: 'Guide', anchor: 'guide', enabled: config.enableGuide },
 		{ label: 'Intention', anchor: 'intention', enabled: config.enableIntention },
 		{ label: 'Goals', anchor: 'goals', enabled: config.enableGoals },
 		{ label: 'Future Log', anchor: 'future-log', enabled: config.enableFutureLog },
-		{ label: 'Habit Tracker', anchor: 'habits', enabled: config.enableHabitTracker },
+		{ label: 'Habits', anchor: 'habits', enabled: config.enableHabitTracker },
 		{ label: 'Collections', anchor: 'collections', enabled: config.enableCollections }
 	];
 
+	let linkX = margins.left;
 	for (const section of sections) {
 		if (section.enabled) {
-			const linkText = `> ${section.label}`;
-			const textWidth = font.widthOfTextAtSize(linkText, 12);
+			const textWidth = font.widthOfTextAtSize(section.label, 10);
 
-			page.drawText(linkText, {
-				x: margins.left + 10,
+			page.drawText(section.label, {
+				x: linkX,
 				y,
-				size: 12,
+				size: 10,
 				font
 			});
 
 			ctx.pendingLinks.push({
 				page,
-				x: margins.left + 10,
+				x: linkX,
 				y: y - 4,
 				width: textWidth,
 				height: lineHeight,
 				targetAnchor: section.anchor
 			});
 
-			y -= lineHeight;
+			linkX += textWidth + 15;
 		}
 	}
 
+	y -= lineHeight * 2;
+
+	// Separator
+	page.drawLine({
+		start: { x: margins.left, y: y + lineHeight * 0.5 },
+		end: { x: pageWidth - margins.right, y: y + lineHeight * 0.5 },
+		thickness: 0.5,
+		color: rgb(0.8, 0.8, 0.8)
+	});
 	y -= lineHeight;
 
-	// Monthly & Weekly combined - shows weeks within each month
-	if (config.enableMonthlyPages) {
-		page.drawText('Monthly / Weekly', {
-			x: margins.left,
-			y,
-			size: 14,
-			font: boldFont
-		});
-		y -= lineHeight * 1.2;
+	// Unified calendar index - one layout for monthly, weekly, daily
+	const monthBlockHeight = lineHeight * 4; // Month name + day letters + days + week indicators
+	const dayWidth = contentWidth / 31;
 
-		const colWidth = (pageWidth - margins.left - margins.right) / 3;
-
-		for (let month = 0; month < monthCount; month++) {
-			const monthDate = dayjs(`${config.year}-${month + 1}-01`);
-			const monthName = monthDate.format('MMM');
-			const col = month % 3;
-			const row = Math.floor(month / 3);
-			const xPos = margins.left + col * colWidth;
-			const yPos = y - row * (lineHeight * 2.5);
-
-			// Month name (link to monthly page)
-			const monthTextWidth = boldFont.widthOfTextAtSize(monthName, 11);
-			page.drawText(monthName, {
-				x: xPos,
-				y: yPos,
-				size: 11,
-				font: boldFont
-			});
-
-			ctx.pendingLinks.push({
-				page,
-				x: xPos,
-				y: yPos - 4,
-				width: monthTextWidth,
-				height: lineHeight,
-				targetAnchor: `month-${month}-timeline`
-			});
-
-			// Week numbers for this month (if weekly pages enabled)
-			if (config.enableWeeklyPages) {
-				const firstDayOfMonth = monthDate.startOf('month');
-				const lastDayOfMonth = monthDate.endOf('month');
-				const firstWeek = config.weekStart === 'monday' ? firstDayOfMonth.isoWeek() : firstDayOfMonth.week();
-				const lastWeek = config.weekStart === 'monday' ? lastDayOfMonth.isoWeek() : lastDayOfMonth.week();
-
-				// Handle year wrap (December week 1)
-				const weekStart = firstWeek;
-				const weekEnd = lastWeek < firstWeek ? (config.weekStart === 'monday' ? 52 : 53) : lastWeek;
-
-				let weekX = xPos + monthTextWidth + 8;
-				for (let week = weekStart; week <= weekEnd; week++) {
-					const weekText = `${week}`;
-					const weekTextWidth = font.widthOfTextAtSize(weekText, 9);
-
-					page.drawText(weekText, {
-						x: weekX,
-						y: yPos,
-						size: 9,
-						font,
-						color: rgb(0.4, 0.4, 0.4)
-					});
-
-					ctx.pendingLinks.push({
-						page,
-						x: weekX - 2,
-						y: yPos - 4,
-						width: weekTextWidth + 4,
-						height: lineHeight,
-						targetAnchor: `week-${week}-action`
-					});
-
-					weekX += weekTextWidth + 6;
-				}
-			}
-		}
-		y -= Math.ceil(monthCount / 3) * (lineHeight * 2.5) + lineHeight;
-	}
-
-	// Daily index (only if daily pages enabled) - separate page(s)
-	if (config.enableDailyPages) {
-		addDailyIndexPages(ctx, monthCount);
-	}
-}
-
-function addDailyIndexPages(ctx: GeneratorContext, monthCount: number) {
-	const { font, boldFont, margins, pageHeight, config } = ctx;
-	const lineHeight = 16;
-	const colWidth = 35;
-	const rowsPerPage = Math.floor((pageHeight - margins.top - margins.bottom - 80) / lineHeight);
-
-	// Generate one page per month for the daily index
 	for (let month = 0; month < monthCount; month++) {
 		const monthDate = dayjs(`${config.year}-${month + 1}-01`);
 		const monthName = monthDate.format('MMMM');
 		const daysInMonth = monthDate.daysInMonth();
-		const anchor = month === 0 ? 'daily-index' : `daily-index-${month}`;
 
-		const page = addPage(ctx, anchor);
-		drawHeader(page, ctx, `Daily Index - ${monthName}`, [], { habits: month === 0 ? 'habits' : `habits-${month}` });
+		// Check if we need a new page
+		if (y - monthBlockHeight < margins.bottom + 20) {
+			page = addPage(ctx, `index-${month}`);
+			drawHeader(page, ctx, 'Index', []);
+			y = pageHeight - margins.top - 50;
+		}
 
-		let y = pageHeight - margins.top - 60;
+		// Month name (clickable to monthly page)
+		const monthTextWidth = boldFont.widthOfTextAtSize(monthName, 12);
+		page.drawText(monthName, {
+			x: margins.left,
+			y,
+			size: 12,
+			font: boldFont
+		});
 
-		// Draw calendar-style grid of day numbers
-		const cols = 7;
-		const startDayOfWeek = monthDate.day(); // 0 = Sunday
+		if (config.enableMonthlyPages) {
+			ctx.pendingLinks.push({
+				page,
+				x: margins.left,
+				y: y - 4,
+				width: monthTextWidth,
+				height: lineHeight,
+				targetAnchor: `month-${month}-timeline`
+			});
+		}
 
-		// Day of week headers
-		const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-		for (let i = 0; i < 7; i++) {
-			page.drawText(dayNames[i], {
-				x: margins.left + i * colWidth + 10,
+		// Habit tracker link on right side
+		if (config.enableHabitTracker) {
+			const habText = 'Hab';
+			const habTextWidth = font.widthOfTextAtSize(habText, 10);
+			const habX = pageWidth - margins.right - habTextWidth;
+
+			page.drawText(habText, {
+				x: habX,
 				y,
 				size: 10,
-				font: boldFont,
+				font,
+				color: rgb(0.4, 0.4, 0.4)
+			});
+
+			ctx.pendingLinks.push({
+				page,
+				x: habX - 2,
+				y: y - 4,
+				width: habTextWidth + 4,
+				height: lineHeight,
+				targetAnchor: `habits-month-${month}`
+			});
+		}
+
+		y -= lineHeight * 0.9;
+
+		// Day of week letters above each day number
+		for (let day = 1; day <= daysInMonth; day++) {
+			const date = monthDate.date(day);
+			const dayOfWeek = date.format('dd')[0]; // First letter: M, T, W, T, F, S, S
+			const xPos = margins.left + (day - 1) * dayWidth;
+
+			page.drawText(dayOfWeek, {
+				x: xPos,
+				y,
+				size: 6,
+				font,
 				color: rgb(0.5, 0.5, 0.5)
 			});
 		}
-		y -= lineHeight * 1.5;
 
-		// Day numbers in calendar grid
-		let dayNum = 1;
-		let row = 0;
-		while (dayNum <= daysInMonth) {
-			for (let col = 0; col < 7 && dayNum <= daysInMonth; col++) {
-				// Skip cells before the 1st of the month
-				if (row === 0 && col < startDayOfWeek) continue;
+		y -= lineHeight * 0.7;
 
-				const date = monthDate.date(dayNum);
-				const dateStr = date.format('YYYY-MM-DD');
-				const xPos = margins.left + col * colWidth + 10;
-				const yPos = y - row * lineHeight;
+		// Day numbers on one line (clickable to daily pages)
+		for (let day = 1; day <= daysInMonth; day++) {
+			const date = monthDate.date(day);
+			const dateStr = date.format('YYYY-MM-DD');
+			const xPos = margins.left + (day - 1) * dayWidth;
+			const dayText = `${day}`;
 
-				page.drawText(`${dayNum}`, {
-					x: xPos,
-					y: yPos,
-					size: 11,
-					font
-				});
+			page.drawText(dayText, {
+				x: xPos,
+				y,
+				size: 8,
+				font
+			});
 
-				// Add link to daily page
+			if (config.enableDailyPages) {
 				ctx.pendingLinks.push({
 					page,
-					x: xPos - 5,
-					y: yPos - 4,
-					width: colWidth - 5,
+					x: xPos - 2,
+					y: y - 4,
+					width: dayWidth,
 					height: lineHeight,
 					targetAnchor: `day-${dateStr}`
 				});
-
-				dayNum++;
 			}
-			row++;
 		}
+
+		y -= lineHeight * 0.7;
+
+		// Week indicators below the days (clickable to weekly pages)
+		let currentDay = 1;
+		while (currentDay <= daysInMonth) {
+			const currentDate = monthDate.date(currentDay);
+			const weekNum = config.weekStart === 'monday' ? currentDate.isoWeek() : currentDate.week();
+			const weekStartDay = currentDay;
+
+			// Find end of this week in this month
+			let weekEndDay = currentDay;
+			while (weekEndDay < daysInMonth) {
+				const nextDate = monthDate.date(weekEndDay + 1);
+				const nextWeek = config.weekStart === 'monday' ? nextDate.isoWeek() : nextDate.week();
+				if (nextWeek !== weekNum) break;
+				weekEndDay++;
+			}
+
+			// Draw week indicator with dashes and week number
+			const startX = margins.left + (weekStartDay - 1) * dayWidth;
+			const endX = margins.left + weekEndDay * dayWidth - 4;
+			const midX = (startX + endX) / 2;
+			const weekNumText = `${weekNum}`;
+			const weekNumWidth = font.widthOfTextAtSize(weekNumText, 7);
+
+			// Left dash
+			if (midX - weekNumWidth / 2 - 4 > startX) {
+				page.drawLine({
+					start: { x: startX, y: y + 4 },
+					end: { x: midX - weekNumWidth / 2 - 4, y: y + 4 },
+					thickness: 0.5,
+					color: rgb(0.6, 0.6, 0.6)
+				});
+			}
+
+			// Week number
+			page.drawText(weekNumText, {
+				x: midX - weekNumWidth / 2,
+				y,
+				size: 7,
+				font,
+				color: rgb(0.5, 0.5, 0.5)
+			});
+
+			// Right dash
+			if (endX > midX + weekNumWidth / 2 + 4) {
+				page.drawLine({
+					start: { x: midX + weekNumWidth / 2 + 4, y: y + 4 },
+					end: { x: endX, y: y + 4 },
+					thickness: 0.5,
+					color: rgb(0.6, 0.6, 0.6)
+				});
+			}
+
+			// Add link to weekly page
+			if (config.enableWeeklyPages) {
+				ctx.pendingLinks.push({
+					page,
+					x: startX,
+					y: y - 4,
+					width: endX - startX,
+					height: lineHeight,
+					targetAnchor: `week-${weekNum}-action`
+				});
+			}
+
+			currentDay = weekEndDay + 1;
+		}
+
+		y -= lineHeight * 0.9;
+
+		// Separator line
+		page.drawLine({
+			start: { x: margins.left, y: y + lineHeight * 0.3 },
+			end: { x: pageWidth - margins.right, y: y + lineHeight * 0.3 },
+			thickness: 0.5,
+			color: rgb(0.85, 0.85, 0.85)
+		});
+
+		y -= lineHeight * 0.6;
 	}
 }
 
