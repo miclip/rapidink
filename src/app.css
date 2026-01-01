@@ -26,6 +26,8 @@ body {
 	background-color: var(--color-bg);
 	background-image: radial-gradient(circle, #d0d0d0 1px, transparent 1px);
 	background-size: 20px 20px;
+	background-position: 0 0;
+	background-attachment: fixed;
 }
 
 .container {

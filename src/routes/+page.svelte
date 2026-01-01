@@ -655,8 +655,8 @@
 			</button>
 
 			<p class="form-hint text-center mt-1">
-				Sample generates a quick preview without daily pages.<br>
-				Full year includes all 365+ daily pages.
+				Sample generates a quick preview. Full year includes all 365+ daily pages.<br>
+				<strong>100% client-side</strong> — nothing is logged or sent to any server.
 			</p>
 		</div>
 
