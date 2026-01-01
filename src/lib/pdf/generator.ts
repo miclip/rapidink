@@ -56,6 +56,11 @@ function mutedTextColor(ctx: GeneratorContext, opacity: number = 0.5) {
 	return rgb(1 - (1 - c.r) * opacity, 1 - (1 - c.g) * opacity, 1 - (1 - c.b) * opacity);
 }
 
+// Scale a value based on context scale factor
+function s(ctx: GeneratorContext, value: number): number {
+	return value * ctx.scale;
+}
+
 interface PendingLink {
 	page: PDFPage;
 	x: number;
@@ -85,7 +90,12 @@ interface GeneratorContext {
 	holidays: Map<string, Holiday>;
 	// Flow diagram image for guide page
 	flowDiagramImage?: PDFImage;
+	// Scale factor for responsive layouts (1.0 = Paper Pro reference size)
+	scale: number;
 }
+
+// Reference device for scaling calculations (Paper Pro in portrait)
+const REFERENCE_HEIGHT_PT = 679; // Paper Pro: 2160px at 229dpi ≈ 679pt
 
 export interface GeneratorProgress {
 	phase: string;
@@ -138,13 +148,18 @@ export async function generatePDF(
 			break;
 	}
 
+	// Calculate scale factor early so we can use it for margins
+	const scale = pageHeight / REFERENCE_HEIGHT_PT;
+
 	const toolbarPadding = pxToPoints(toolbarWidth, device.dpi);
-	const extraBuffer = 15; // Extra space to prevent toolbar overlap
+	const extraBuffer = 15 * scale; // Extra space to prevent toolbar overlap
+	const baseMarginV = 40 * scale;
+	const baseMarginH = 20 * scale;
 	const margins = {
-		top: config.toolbarPosition === 'top' ? toolbarPadding + 40 + extraBuffer : 40,
-		right: config.toolbarPosition === 'right' ? toolbarPadding + 20 + extraBuffer : 20,
-		bottom: config.toolbarPosition === 'bottom' ? toolbarPadding + 40 + extraBuffer : 40,
-		left: config.toolbarPosition === 'left' ? toolbarPadding + 20 + extraBuffer : 20
+		top: config.toolbarPosition === 'top' ? toolbarPadding + baseMarginV + extraBuffer : baseMarginV,
+		right: config.toolbarPosition === 'right' ? toolbarPadding + baseMarginH + extraBuffer : baseMarginH,
+		bottom: config.toolbarPosition === 'bottom' ? toolbarPadding + baseMarginV + extraBuffer : baseMarginV,
+		left: config.toolbarPosition === 'left' ? toolbarPadding + baseMarginH + extraBuffer : baseMarginH
 	};
 
 	// Load flow diagram image for guide page
@@ -188,7 +203,8 @@ export async function generatePDF(
 		lineColor: hexToRgb(config.lineColor || '#666666'),
 		lineOpacity: config.lineOpacity ?? 0.8,
 		holidays: holidaysMap,
-		flowDiagramImage
+		flowDiagramImage,
+		scale
 	};
 
 	const report = (phase: string, current: number, total: number, message: string) => {
@@ -420,9 +436,11 @@ function drawHeader(
 ) {
 	const { font, boldFont, margins, pageWidth, pageHeight, config } = ctx;
 	const y = pageHeight - margins.top;
-	const navFontSize = 9;
-	const linkHeight = 20; // Touch-friendly height
-	const navGap = 1;
+	const navFontSize = s(ctx, 9);
+	const titleSize = s(ctx, 16);
+	const linkHeight = s(ctx, 20); // Touch-friendly height
+	const navGap = s(ctx, 1);
+	const minLinkWidth = s(ctx, 22);
 	const showNav = options?.showNav !== false;
 	const navType = options?.navType || 'calendar';
 	const allowedIds = navType === 'reference' ? REFERENCE_NAV_IDS : CALENDAR_NAV_IDS;
@@ -438,25 +456,25 @@ function drawHeader(
 	let totalNavWidth = 0;
 	for (const link of enabledLinks) {
 		const icon = NAV_ICONS[link.id] || link.label.substring(0, 3);
-		const linkWidth = Math.max(font.widthOfTextAtSize(icon, navFontSize) + 4, 22);
+		const linkWidth = Math.max(font.widthOfTextAtSize(icon, navFontSize) + s(ctx, 4), minLinkWidth);
 		totalNavWidth += linkWidth + navGap;
 	}
 
 	// Title (left side, with max width to avoid overlap)
-	const maxTitleWidth = pageWidth - margins.left - margins.right - totalNavWidth - 20;
+	const maxTitleWidth = pageWidth - margins.left - margins.right - totalNavWidth - s(ctx, 20);
 	let displayTitle = title;
-	let titleWidth = boldFont.widthOfTextAtSize(displayTitle, 16);
+	let titleWidth = boldFont.widthOfTextAtSize(displayTitle, titleSize);
 
 	// Truncate title if too long
 	while (titleWidth > maxTitleWidth && displayTitle.length > 10) {
 		displayTitle = displayTitle.substring(0, displayTitle.length - 4) + '...';
-		titleWidth = boldFont.widthOfTextAtSize(displayTitle, 16);
+		titleWidth = boldFont.widthOfTextAtSize(displayTitle, titleSize);
 	}
 
 	page.drawText(displayTitle, {
 		x: margins.left,
 		y,
-		size: 16,
+		size: titleSize,
 		font: boldFont,
 		color: textColor(ctx)
 	});
@@ -468,13 +486,13 @@ function drawHeader(
 		for (let i = enabledLinks.length - 1; i >= 0; i--) {
 			const link = enabledLinks[i];
 			const icon = NAV_ICONS[link.id] || link.label.substring(0, 3);
-			const linkWidth = Math.max(font.widthOfTextAtSize(icon, navFontSize) + 4, 22);
+			const linkWidth = Math.max(font.widthOfTextAtSize(icon, navFontSize) + s(ctx, 4), minLinkWidth);
 			navX -= linkWidth;
 
 			// Draw icon text
 			page.drawText(icon, {
-				x: navX + 2,
-				y: y + 2,
+				x: navX + s(ctx, 2),
+				y: y + s(ctx, 2),
 				size: navFontSize,
 				font,
 				color: mutedTextColor(ctx, 0.6)
@@ -486,7 +504,7 @@ function drawHeader(
 			ctx.pendingLinks.push({
 				page,
 				x: navX,
-				y: y - 5,
+				y: y - s(ctx, 5),
 				width: linkWidth,
 				height: linkHeight,
 				targetAnchor
@@ -514,15 +532,15 @@ function addCoverPage(ctx: GeneratorContext) {
 	// Use custom subtitle or default to "Planner" (no branding)
 	const subtitle = config.coverSubtitle || 'Planner';
 
-	const titleSize = 48;
-	const subtitleSize = 24;
+	const titleSize = s(ctx, 48);
+	const subtitleSize = s(ctx, 24);
 
 	const titleWidth = boldFont.widthOfTextAtSize(title, titleSize);
 	const subtitleWidth = boldFont.widthOfTextAtSize(subtitle, subtitleSize);
 
 	page.drawText(title, {
 		x: (pageWidth - titleWidth) / 2,
-		y: pageHeight / 2 + 40,
+		y: pageHeight / 2 + s(ctx, 40),
 		size: titleSize,
 		font: boldFont,
 		color: textColor(ctx)
@@ -530,7 +548,7 @@ function addCoverPage(ctx: GeneratorContext) {
 
 	page.drawText(subtitle, {
 		x: (pageWidth - subtitleWidth) / 2,
-		y: pageHeight / 2 - 20,
+		y: pageHeight / 2 - s(ctx, 20),
 		size: subtitleSize,
 		font: boldFont,
 		color: mutedTextColor(ctx, 0.7)
@@ -538,12 +556,12 @@ function addCoverPage(ctx: GeneratorContext) {
 
 	// Fine print at bottom of cover
 	const { font, margins } = ctx;
-	const finePrintSize = 7;
+	const finePrintSize = s(ctx, 7);
 	const finePrintLines = [
 		'This planner uses the Bullet Journal® method. Bullet Journal® is a registered trademark of Lightcage, LLC.',
 		'This project is not affiliated with or endorsed by Bullet Journal® or Ryder Carroll. Learn more at bulletjournal.com'
 	];
-	let finePrintY = margins.bottom + 20;
+	let finePrintY = margins.bottom + s(ctx, 20);
 	for (const line of finePrintLines.reverse()) {
 		const lineWidth = font.widthOfTextAtSize(line, finePrintSize);
 		page.drawText(line, {
@@ -553,7 +571,7 @@ function addCoverPage(ctx: GeneratorContext) {
 			font,
 			color: mutedTextColor(ctx, 0.5)
 		});
-		finePrintY += 10;
+		finePrintY += s(ctx, 10);
 	}
 }
 
@@ -572,8 +590,11 @@ function addIndexPages(ctx: GeneratorContext) {
 	drawHeader(page, ctx, 'Index', navLinks, { navType: 'reference' });
 
 	const { font, boldFont, margins, pageHeight, pageWidth, config } = ctx;
-	let y = pageHeight - margins.top - 25;
-	const lineHeight = 13;
+	let y = pageHeight - margins.top - s(ctx, 25);
+	const lineHeight = s(ctx, 13);
+	const fontSize = s(ctx, 12);
+	const smallFontSize = s(ctx, 10);
+	const tinyFontSize = s(ctx, 9);
 	const monthCount = config.sampleMonthCount && config.sampleMonthCount > 0 ? config.sampleMonthCount : 12;
 	const contentWidth = pageWidth - margins.left - margins.right;
 
@@ -587,20 +608,20 @@ function addIndexPages(ctx: GeneratorContext) {
 		const daysInMonth = monthDate.daysInMonth();
 
 		// Check if we need a new page
-		if (y - monthBlockHeight < margins.bottom + 10) {
+		if (y - monthBlockHeight < margins.bottom + s(ctx, 10)) {
 			page = addPage(ctx, `index-${month}`);
 			drawHeader(page, ctx, 'Index', navLinks, { navType: 'reference' });
-			y = pageHeight - margins.top - 25;
+			y = pageHeight - margins.top - s(ctx, 25);
 		}
 
 		// Month name (clickable to monthly page)
-		const monthTextWidth = boldFont.widthOfTextAtSize(monthName, 12);
+		const monthTextWidth = boldFont.widthOfTextAtSize(monthName, fontSize);
 		let xPos = margins.left;
 
 		page.drawText(monthName, {
 			x: xPos,
 			y,
-			size: 12,
+			size: fontSize,
 			font: boldFont,
 			color: textColor(ctx)
 		});
@@ -609,7 +630,7 @@ function addIndexPages(ctx: GeneratorContext) {
 			ctx.pendingLinks.push({
 				page,
 				x: xPos,
-				y: y - 4,
+				y: y - s(ctx, 4),
 				width: monthTextWidth,
 				height: lineHeight,
 				targetAnchor: `month-${month}-timeline`
@@ -621,13 +642,13 @@ function addIndexPages(ctx: GeneratorContext) {
 		if (config.enableHabitTracker) {
 			const separator = ' | ';
 			const habText = 'Monthly Habit Tracker';
-			const separatorWidth = font.widthOfTextAtSize(separator, 10);
-			const habTextWidth = font.widthOfTextAtSize(habText, 10);
+			const separatorWidth = font.widthOfTextAtSize(separator, smallFontSize);
+			const habTextWidth = font.widthOfTextAtSize(habText, smallFontSize);
 
 			page.drawText(separator, {
 				x: xPos,
 				y,
-				size: 10,
+				size: smallFontSize,
 				font,
 				color: mutedTextColor(ctx, 0.6)
 			});
@@ -636,7 +657,7 @@ function addIndexPages(ctx: GeneratorContext) {
 			page.drawText(habText, {
 				x: xPos,
 				y,
-				size: 10,
+				size: smallFontSize,
 				font,
 				color: mutedTextColor(ctx, 0.6)
 			});
@@ -645,9 +666,9 @@ function addIndexPages(ctx: GeneratorContext) {
 			const habitAnchor = month === 0 ? 'habits' : `habits-${month}`;
 			ctx.pendingLinks.push({
 				page,
-				x: xPos - 2,
-				y: y - 4,
-				width: habTextWidth + 4,
+				x: xPos - s(ctx, 2),
+				y: y - s(ctx, 4),
+				width: habTextWidth + s(ctx, 4),
 				height: lineHeight,
 				targetAnchor: habitAnchor
 			});
@@ -656,6 +677,9 @@ function addIndexPages(ctx: GeneratorContext) {
 		y -= lineHeight * 0.9;
 
 		// Day of week letters above each day number
+		const microFontSize = s(ctx, 6);
+		const miniDaySize = s(ctx, 8);
+		const weekNumSize = s(ctx, 7);
 		for (let day = 1; day <= daysInMonth; day++) {
 			const date = monthDate.date(day);
 			const dayOfWeek = date.format('dd')[0]; // First letter: M, T, W, T, F, S, S
@@ -664,7 +688,7 @@ function addIndexPages(ctx: GeneratorContext) {
 			page.drawText(dayOfWeek, {
 				x: xPos,
 				y,
-				size: 6,
+				size: microFontSize,
 				font,
 				color: mutedTextColor(ctx, 0.5)
 			});
@@ -682,7 +706,7 @@ function addIndexPages(ctx: GeneratorContext) {
 			page.drawText(dayText, {
 				x: xPos,
 				y,
-				size: 8,
+				size: miniDaySize,
 				font,
 				color: textColor(ctx)
 			});
@@ -690,8 +714,8 @@ function addIndexPages(ctx: GeneratorContext) {
 			if (config.enableDailyPages) {
 				ctx.pendingLinks.push({
 					page,
-					x: xPos - 2,
-					y: y - 4,
+					x: xPos - s(ctx, 2),
+					y: y - s(ctx, 4),
 					width: dayWidth,
 					height: lineHeight,
 					targetAnchor: `day-${dateStr}`
@@ -719,24 +743,24 @@ function addIndexPages(ctx: GeneratorContext) {
 
 			// Draw week indicator with vertical bar, week number, and underline
 			const startX = margins.left + (weekStartDay - 1) * dayWidth;
-			const endX = margins.left + weekEndDay * dayWidth - 2;
+			const endX = margins.left + weekEndDay * dayWidth - s(ctx, 2);
 			const weekNumText = `${weekNum}`;
-			const weekNumWidth = font.widthOfTextAtSize(weekNumText, 7);
+			const weekNumWidth = font.widthOfTextAtSize(weekNumText, weekNumSize);
 
 			// Week number
 			page.drawText(weekNumText, {
 				x: startX,
 				y,
-				size: 7,
+				size: weekNumSize,
 				font,
 				color: mutedTextColor(ctx, 0.6)
 			});
 
 			// Underline spanning the week
 			page.drawLine({
-				start: { x: startX + weekNumWidth + 2, y: y + 3 },
-				end: { x: endX, y: y + 3 },
-				thickness: 0.5,
+				start: { x: startX + weekNumWidth + s(ctx, 2), y: y + s(ctx, 3) },
+				end: { x: endX, y: y + s(ctx, 3) },
+				thickness: s(ctx, 0.5),
 				color: lineColor(ctx)
 			});
 
@@ -745,7 +769,7 @@ function addIndexPages(ctx: GeneratorContext) {
 				ctx.pendingLinks.push({
 					page,
 					x: startX,
-					y: y - 4,
+					y: y - s(ctx, 4),
 					width: endX - startX,
 					height: lineHeight,
 					targetAnchor: `week-${weekNum}-action`
@@ -765,14 +789,17 @@ function addGuidePage(ctx: GeneratorContext) {
 	drawDotGrid(page, ctx);
 
 	const { font, boldFont, margins, pageHeight } = ctx;
-	let y = pageHeight - margins.top - 60;
-	const lineHeight = 18;
+	let y = pageHeight - margins.top - s(ctx, 60);
+	const lineHeight = s(ctx, 18);
+	const headingSize = s(ctx, 14);
+	const textSize = s(ctx, 12);
+	const smallTextSize = s(ctx, 11);
 
 	// Symbol Key
 	page.drawText('Rapid Logging Symbols', {
 		x: margins.left,
 		y,
-		size: 14,
+		size: headingSize,
 		font: boldFont,
 		color: textColor(ctx)
 	});
@@ -794,27 +821,27 @@ function addGuidePage(ctx: GeneratorContext) {
 		const hasStrikethrough = 'strikethrough' in item && item.strikethrough;
 
 		page.drawText(symbol, {
-			x: margins.left + 20,
+			x: margins.left + s(ctx, 20),
 			y,
-			size: 14,
+			size: headingSize,
 			font: boldFont,
 			color: textColor(ctx)
 		});
 		page.drawText(meaning, {
-			x: margins.left + 50,
+			x: margins.left + s(ctx, 50),
 			y,
-			size: 12,
+			size: textSize,
 			font,
 			color: textColor(ctx)
 		});
 
 		// Draw strikethrough line if needed (only through the meaning text)
 		if (hasStrikethrough) {
-			const textWidth = font.widthOfTextAtSize(meaning, 12);
+			const textWidth = font.widthOfTextAtSize(meaning, textSize);
 			page.drawLine({
-				start: { x: margins.left + 50, y: y + 4 },
-				end: { x: margins.left + 50 + textWidth, y: y + 4 },
-				thickness: 1,
+				start: { x: margins.left + s(ctx, 50), y: y + s(ctx, 4) },
+				end: { x: margins.left + s(ctx, 50) + textWidth, y: y + s(ctx, 4) },
+				thickness: s(ctx, 1),
 				color: textColor(ctx)
 			});
 		}
@@ -828,7 +855,7 @@ function addGuidePage(ctx: GeneratorContext) {
 	page.drawText('Planning Flow', {
 		x: margins.left,
 		y,
-		size: 14,
+		size: headingSize,
 		font: boldFont,
 		color: textColor(ctx)
 	});
@@ -839,12 +866,12 @@ function addGuidePage(ctx: GeneratorContext) {
 		const imgWidth = ctx.flowDiagramImage.width;
 		const imgHeight = ctx.flowDiagramImage.height;
 		const availableWidth = ctx.contentWidth - margins.left - margins.right;
-		const maxHeight = 220; // Limit height to leave room for T.A.M.E. section
+		const maxHeight = s(ctx, 220); // Limit height to leave room for T.A.M.E. section
 
 		// Scale to fit available space
-		const scale = Math.min(availableWidth / imgWidth, maxHeight / imgHeight);
-		const drawWidth = imgWidth * scale;
-		const drawHeight = imgHeight * scale;
+		const imgScale = Math.min(availableWidth / imgWidth, maxHeight / imgHeight);
+		const drawWidth = imgWidth * imgScale;
+		const drawHeight = imgHeight * imgScale;
 
 		// Center the image horizontally
 		const centerX = margins.left + (availableWidth - drawWidth) / 2;
@@ -875,9 +902,9 @@ function addGuidePage(ctx: GeneratorContext) {
 
 		for (const line of flow) {
 			page.drawText(line, {
-				x: margins.left + 20,
+				x: margins.left + s(ctx, 20),
 				y,
-				size: 11,
+				size: smallTextSize,
 				font,
 				color: textColor(ctx)
 			});
@@ -891,7 +918,7 @@ function addGuidePage(ctx: GeneratorContext) {
 	page.drawText('Reflection (T.A.M.E.)', {
 		x: margins.left,
 		y,
-		size: 14,
+		size: headingSize,
 		font: boldFont,
 		color: textColor(ctx)
 	});
@@ -906,9 +933,9 @@ function addGuidePage(ctx: GeneratorContext) {
 
 	for (const line of tame) {
 		page.drawText(line, {
-			x: margins.left + 20,
+			x: margins.left + s(ctx, 20),
 			y,
-			size: 11,
+			size: smallTextSize,
 			font,
 			color: textColor(ctx)
 		});
@@ -927,8 +954,8 @@ function addIntentionPage(ctx: GeneratorContext) {
 		'An intention is a commitment to a process. Set your compass for the year.',
 		{
 			x: margins.left,
-			y: margins.bottom + 10,
-			size: 10,
+			y: margins.bottom + s(ctx, 10),
+			size: s(ctx, 10),
 			font,
 			color: mutedTextColor(ctx, 0.6)
 		}
