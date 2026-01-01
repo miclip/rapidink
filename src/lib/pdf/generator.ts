@@ -497,7 +497,7 @@ function drawHeader(
 				y: y + s(ctx, 2),
 				size: navFontSize,
 				font,
-				color: mutedTextColor(ctx, 0.6)
+				color: mutedTextColor(ctx, 0.8)
 			});
 
 			// Store pending link for second pass (after all pages exist)
@@ -553,7 +553,7 @@ function addCoverPage(ctx: GeneratorContext) {
 		y: pageHeight / 2 - s(ctx, 20),
 		size: subtitleSize,
 		font: boldFont,
-		color: mutedTextColor(ctx, 0.7)
+		color: mutedTextColor(ctx, 0.85)
 	});
 
 	// Fine print at bottom of cover
@@ -571,7 +571,7 @@ function addCoverPage(ctx: GeneratorContext) {
 			y: finePrintY,
 			size: finePrintSize,
 			font,
-			color: mutedTextColor(ctx, 0.5)
+			color: mutedTextColor(ctx, 0.85)
 		});
 		finePrintY += s(ctx, 10);
 	}
@@ -653,7 +653,7 @@ function addIndexPages(ctx: GeneratorContext) {
 				y,
 				size: tinyFontSize,
 				font,
-				color: mutedTextColor(ctx, 0.6)
+				color: mutedTextColor(ctx, 0.8)
 			});
 			xPos += separatorWidth;
 
@@ -662,7 +662,7 @@ function addIndexPages(ctx: GeneratorContext) {
 				y,
 				size: tinyFontSize,
 				font,
-				color: mutedTextColor(ctx, 0.6)
+				color: mutedTextColor(ctx, 0.8)
 			});
 
 			// Use correct anchor: 'habits' for month 0, 'habits-N' for others
@@ -693,7 +693,7 @@ function addIndexPages(ctx: GeneratorContext) {
 				y,
 				size: microFontSize,
 				font,
-				color: mutedTextColor(ctx, 0.5)
+				color: mutedTextColor(ctx, 0.85)
 			});
 		}
 
@@ -756,7 +756,7 @@ function addIndexPages(ctx: GeneratorContext) {
 				y,
 				size: weekNumSize,
 				font,
-				color: mutedTextColor(ctx, 0.6)
+				color: mutedTextColor(ctx, 0.8)
 			});
 
 			// Underline spanning the week
@@ -792,7 +792,7 @@ function addGuidePage(ctx: GeneratorContext) {
 	drawDotGrid(page, ctx);
 
 	const { font, boldFont, margins, pageHeight } = ctx;
-	let y = pageHeight - margins.top - s(ctx, 60);
+	let y = pageHeight - margins.top - s(ctx, 40);
 	const lineHeight = s(ctx, 18);
 	const headingSize = s(ctx, 14);
 	const textSize = s(ctx, 12);
@@ -960,7 +960,7 @@ function addIntentionPage(ctx: GeneratorContext) {
 			y: margins.bottom + s(ctx, 10),
 			size: s(ctx, 10),
 			font,
-			color: mutedTextColor(ctx, 0.6)
+			color: mutedTextColor(ctx, 0.8)
 		}
 	);
 }
@@ -976,10 +976,10 @@ function addGoalsPage(ctx: GeneratorContext) {
 		'Goals define outcomes. Transform dreams into tangible targets.',
 		{
 			x: margins.left,
-			y: margins.bottom + 10,
-			size: 10,
+			y: margins.bottom + s(ctx, 10),
+			size: s(ctx, 10),
 			font,
-			color: mutedTextColor(ctx, 0.6)
+			color: mutedTextColor(ctx, 0.8)
 		}
 	);
 }
@@ -992,8 +992,9 @@ function addFutureLogPages(ctx: GeneratorContext) {
 
 	const { font, boldFont, margins, pageWidth, pageHeight } = ctx;
 	const colWidth = (pageWidth - margins.left - margins.right) / 2;
-	let y = pageHeight - margins.top - 60;
-	const monthHeight = (pageHeight - margins.top - margins.bottom - 60) / 3;
+	let y = pageHeight - margins.top - s(ctx, 40);
+	const monthHeight = (pageHeight - margins.top - margins.bottom - s(ctx, 40)) / 3;
+	const futureLogFontSize = s(ctx, 12);
 
 	for (let i = 0; i < 6; i++) {
 		const col = i % 2;
@@ -1002,12 +1003,12 @@ function addFutureLogPages(ctx: GeneratorContext) {
 		const yPos = y - row * monthHeight;
 
 		const monthName = dayjs().month(i).format('MMMM');
-		const textWidth = boldFont.widthOfTextAtSize(monthName, 12);
+		const textWidth = boldFont.widthOfTextAtSize(monthName, futureLogFontSize);
 
 		page1.drawText(monthName, {
 			x,
 			y: yPos,
-			size: 12,
+			size: futureLogFontSize,
 			font: boldFont,
 			color: textColor(ctx)
 		});
@@ -1034,7 +1035,7 @@ function addFutureLogPages(ctx: GeneratorContext) {
 	const page2 = addPage(ctx, 'future-log-2');
 	drawHeader(page2, ctx, 'Future Log', [], { navType: 'reference' });
 	drawDotGrid(page2, ctx);
-	y = pageHeight - margins.top - 60;
+	y = pageHeight - margins.top - s(ctx, 40);
 
 	for (let i = 6; i < 12; i++) {
 		const col = (i - 6) % 2;
@@ -1043,12 +1044,13 @@ function addFutureLogPages(ctx: GeneratorContext) {
 		const yPos = y - row * monthHeight;
 
 		const monthName = dayjs().month(i).format('MMMM');
-		const textWidth = boldFont.widthOfTextAtSize(monthName, 12);
+		const monthFontSize = s(ctx, 12);
+		const textWidth = boldFont.widthOfTextAtSize(monthName, monthFontSize);
 
 		page2.drawText(monthName, {
 			x,
 			y: yPos,
-			size: 12,
+			size: monthFontSize,
 			font: boldFont,
 			color: textColor(ctx)
 		});
@@ -1096,16 +1098,11 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 	const { font, margins, pageHeight } = ctx;
 	const daysInMonth = monthDate.daysInMonth();
 
-	// Use dot grid spacing for line height to align with dots/lines
-	const dotSpacing = (config.dotSpacing / 25.4) * 72; // mm to points
-	const lineHeight = dotSpacing;
+	// Use scaled line height for consistent spacing across devices
+	const lineHeight = s(ctx, 14); // Base ~5mm spacing, scaled for device
 
-	// Calculate starting Y to align with dot grid rows
-	const gridTop = pageHeight - margins.top - 30;
-	const gridBottom = margins.bottom;
-	// Find the highest dot row position and offset slightly for text baseline
-	const topDotRow = gridBottom + Math.floor((gridTop - gridBottom) / dotSpacing) * dotSpacing;
-	let y = topDotRow - 3; // Slight offset for text baseline alignment
+	// Start content at consistent position like other pages
+	let y = pageHeight - margins.top - s(ctx, 40);
 
 	let lastWeekNum = -1;
 
@@ -1119,12 +1116,13 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 		const weekNum = config.weekStart === 'monday' ? date.isoWeek() : date.week();
 
 		// Day number
+		const dayFontSize = s(ctx, 10);
 		timelinePage.drawText(dayText, {
 			x: margins.left,
 			y,
-			size: 10,
+			size: dayFontSize,
 			font,
-			color: isWeekend ? mutedTextColor(ctx, 0.5) : textColor(ctx)
+			color: isWeekend ? mutedTextColor(ctx, 0.85) : textColor(ctx)
 		});
 
 		// Add pending link to daily page (only if daily pages enabled) - just day number
@@ -1142,15 +1140,16 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 		// Week number indicator between day and weekday letter (at start of each week)
 		if (weekNum !== lastWeekNum) {
 			const weekNumText = `${weekNum}`;
-			const weekNumWidth = font.widthOfTextAtSize(weekNumText, 8);
-			const weekIndicatorX = margins.left + 15;
+			const weekNumFontSize = s(ctx, 8);
+			const weekNumWidth = font.widthOfTextAtSize(weekNumText, weekNumFontSize);
+			const weekIndicatorX = margins.left + s(ctx, 15);
 
 			timelinePage.drawText(weekNumText, {
 				x: weekIndicatorX,
 				y,
-				size: 8,
+				size: weekNumFontSize,
 				font,
-				color: mutedTextColor(ctx, 0.5)
+				color: mutedTextColor(ctx, 0.85)
 			});
 
 			// Add link to weekly page
@@ -1170,21 +1169,21 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 
 		// Day of week letter
 		timelinePage.drawText(dayOfWeek, {
-			x: margins.left + 28,
+			x: margins.left + s(ctx, 28),
 			y,
-			size: 10,
+			size: dayFontSize,
 			font,
-			color: isWeekend ? mutedTextColor(ctx, 0.5) : textColor(ctx)
+			color: isWeekend ? mutedTextColor(ctx, 0.85) : textColor(ctx)
 		});
 
 		// Show holiday name if present
 		if (holiday) {
 			timelinePage.drawText(holiday.name, {
-				x: margins.left + 42,
+				x: margins.left + s(ctx, 42),
 				y,
-				size: 8,
+				size: s(ctx, 8),
 				font,
-				color: mutedTextColor(ctx, 0.6)
+				color: mutedTextColor(ctx, 0.8)
 			});
 		}
 
@@ -1219,17 +1218,21 @@ function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
 	], { linkOverrides });
 
 	const { font, boldFont, margins, pageWidth, pageHeight } = ctx;
-	let y = pageHeight - margins.top - 60;
+	let y = pageHeight - margins.top - s(ctx, 40);
 
-	const habitColWidth = 120;
+	const habitColWidth = s(ctx, 120);
 	const dayWidth = (pageWidth - margins.left - margins.right - habitColWidth) / daysInMonth;
-	const rowHeight = 20;
+	const rowHeight = s(ctx, 20);
+	const habitLabelSize = s(ctx, 10);
+	const dayLetterSize = s(ctx, 6);
+	const dayNumSize = s(ctx, 7);
+	const habitNameSize = s(ctx, 9);
 
 	// Header row - day letters
 	page.drawText('Habit', {
 		x: margins.left,
 		y,
-		size: 10,
+		size: habitLabelSize,
 		font: boldFont,
 		color: textColor(ctx)
 	});
@@ -1243,9 +1246,9 @@ function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
 		page.drawText(dayLetter, {
 			x: xPos,
 			y,
-			size: 6,
+			size: dayLetterSize,
 			font,
-			color: mutedTextColor(ctx, 0.5)
+			color: mutedTextColor(ctx, 0.85)
 		});
 	}
 	y -= rowHeight * 0.6;
@@ -1259,7 +1262,7 @@ function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
 		page.drawText(`${day}`, {
 			x: xPos,
 			y,
-			size: 7,
+			size: dayNumSize,
 			font,
 			color: textColor(ctx)
 		});
@@ -1269,7 +1272,7 @@ function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
 			ctx.pendingLinks.push({
 				page,
 				x: xPos,
-				y: y - 4,
+				y: y - s(ctx, 4),
 				width: dayWidth,
 				height: rowHeight,
 				targetAnchor: `day-${dateStr}`
@@ -1279,18 +1282,18 @@ function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
 	y -= rowHeight;
 
 	// Habit rows
-	const radius = Math.min(dayWidth / 2 - 2, 6);
+	const radius = Math.min(dayWidth / 2 - s(ctx, 2), s(ctx, 6));
 
 	for (const habit of config.habits) {
-		const textY = y - 3; // Align text baseline with circle center
-		const circleY = y - 3;
+		const textY = y - s(ctx, 3); // Align text baseline with circle center
+		const circleY = y - s(ctx, 3);
 
 		// Draw habit name or placeholder line
 		if (habit.name) {
 			page.drawText(habit.name, {
 				x: margins.left,
 				y: textY,
-				size: 9,
+				size: habitNameSize,
 				font,
 				color: textColor(ctx)
 			});
@@ -1298,8 +1301,8 @@ function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
 			// Draw a blank line for write-in habits
 			page.drawLine({
 				start: { x: margins.left, y: circleY },
-				end: { x: margins.left + habitColWidth - 10, y: circleY },
-				thickness: 0.5,
+				end: { x: margins.left + habitColWidth - s(ctx, 10), y: circleY },
+				thickness: s(ctx, 0.5),
 				color: lineColor(ctx)
 			});
 		}
@@ -1313,7 +1316,7 @@ function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
 				xScale: radius,
 				yScale: radius,
 				borderColor: lineColor(ctx),
-				borderWidth: 0.5
+				borderWidth: s(ctx, 0.5)
 			});
 		}
 		y -= rowHeight;
@@ -1348,7 +1351,7 @@ function addWeeklyPages(ctx: GeneratorContext, weekNumber: number) {
 	], { linkOverrides });
 
 	const { font, margins, pageHeight } = ctx;
-	const subheadingY = pageHeight - margins.top - 35;
+	const subheadingY = pageHeight - margins.top - s(ctx, 40);
 
 	// Draw week number and day links
 	drawWeekDayLinks(actionPage, ctx, weekNumber, weekStart, subheadingY);
@@ -1367,20 +1370,21 @@ function addWeeklyPages(ctx: GeneratorContext, weekNumber: number) {
 function drawWeekDayLinks(page: PDFPage, ctx: GeneratorContext, weekNumber: number, weekStart: dayjs.Dayjs, y: number) {
 	const { font, margins, config } = ctx;
 	let xPos = margins.left;
+	const weekPrefixSize = s(ctx, 11);
+	const dayFontSize = s(ctx, 9);
 
 	// Week number prefix
 	const weekPrefix = `Week ${weekNumber}: `;
 	page.drawText(weekPrefix, {
 		x: xPos,
 		y,
-		size: 11,
+		size: weekPrefixSize,
 		font,
 		color: textColor(ctx)
 	});
-	xPos += font.widthOfTextAtSize(weekPrefix, 11);
+	xPos += font.widthOfTextAtSize(weekPrefix, weekPrefixSize);
 
 	// Draw each day: "6 M, 7 T, 8 W, 9 T, 10 F, 11 S, 12 S"
-	const dayFontSize = 9;
 	for (let i = 0; i < 7; i++) {
 		const date = weekStart.add(i, 'day');
 		const dayNum = date.date();
@@ -1393,11 +1397,11 @@ function drawWeekDayLinks(page: PDFPage, ctx: GeneratorContext, weekNumber: numb
 		// Color: not in year = very muted, weekend = muted, weekday = normal
 		let dayColor;
 		if (!isInYear) {
-			dayColor = mutedTextColor(ctx, 0.3); // Very muted for days outside year
+			dayColor = mutedTextColor(ctx, 0.85); // Muted for days outside year
 		} else if (isWeekend) {
-			dayColor = mutedTextColor(ctx, 0.5); // Muted for weekends
+			dayColor = mutedTextColor(ctx, 0.85); // Muted for weekends
 		} else {
-			dayColor = config.enableDailyPages ? textColor(ctx) : mutedTextColor(ctx, 0.6);
+			dayColor = config.enableDailyPages ? textColor(ctx) : mutedTextColor(ctx, 0.8);
 		}
 
 		page.drawText(dayText, {
@@ -1413,10 +1417,10 @@ function drawWeekDayLinks(page: PDFPage, ctx: GeneratorContext, weekNumber: numb
 			const dateStr = date.format('YYYY-MM-DD');
 			ctx.pendingLinks.push({
 				page,
-				x: xPos - 2,
-				y: y - 4,
-				width: dayTextWidth + 4,
-				height: 14,
+				x: xPos - s(ctx, 2),
+				y: y - s(ctx, 4),
+				width: dayTextWidth + s(ctx, 4),
+				height: s(ctx, 14),
 				targetAnchor: `day-${dateStr}`
 			});
 		}
@@ -1428,11 +1432,11 @@ function drawWeekDayLinks(page: PDFPage, ctx: GeneratorContext, weekNumber: numb
 			page.drawText(', ', {
 				x: xPos,
 				y,
-				size: 11,
+				size: weekPrefixSize,
 				font,
-				color: mutedTextColor(ctx, 0.4)
+				color: mutedTextColor(ctx, 0.8)
 			});
-			xPos += font.widthOfTextAtSize(', ', 11);
+			xPos += font.widthOfTextAtSize(', ', weekPrefixSize);
 		}
 	}
 }
@@ -1468,14 +1472,16 @@ function addDailyPage(ctx: GeneratorContext, date: dayjs.Dayjs) {
 	// Show holiday and events at top (right after header)
 	const holiday = ctx.holidays.get(dateStr);
 	const dayEvents = config.events.filter(e => e.date === dateStr);
-	let eventY = pageHeight - margins.top - 35;
-	const eventLineHeight = 14;
+	let eventY = pageHeight - margins.top - s(ctx, 35);
+	const eventLineHeight = s(ctx, 14);
+	const eventFontSize = s(ctx, 11);
+	const eventIndent = s(ctx, 20);
 
 	if (holiday) {
 		page.drawText(`o ${holiday.name}`, {
-			x: margins.left + 20,
+			x: margins.left + eventIndent,
 			y: eventY,
-			size: 11,
+			size: eventFontSize,
 			font,
 			color: textColor(ctx)
 		});
@@ -1484,9 +1490,9 @@ function addDailyPage(ctx: GeneratorContext, date: dayjs.Dayjs) {
 
 	for (const event of dayEvents.slice(0, 3)) {
 		page.drawText(`o ${event.title}`, {
-			x: margins.left + 20,
+			x: margins.left + eventIndent,
 			y: eventY,
-			size: 11,
+			size: eventFontSize,
 			font,
 			color: textColor(ctx)
 		});
@@ -1501,15 +1507,19 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 	drawHeader(page, ctx, 'Collections', [{ label: 'Index', anchor: 'index' }], { navType: 'reference' });
 
 	const { font, boldFont, margins, pageHeight, pageWidth, config } = ctx;
-	let y = pageHeight - margins.top - 60;
-	const lineHeight = 18;
+	let y = pageHeight - margins.top - s(ctx, 40);
+	const lineHeight = s(ctx, 18);
+	const sectionFontSize = s(ctx, 14);
+	const collectionFontSize = s(ctx, 12);
+	const pageCountFontSize = s(ctx, 9);
+	const indent = s(ctx, 10);
 
 	// Pre-defined collections (no chevron, name is clickable)
 	if (config.collections.length > 0) {
 		page.drawText('Collections', {
 			x: margins.left,
 			y,
-			size: 14,
+			size: sectionFontSize,
 			font: boldFont,
 			color: textColor(ctx)
 		});
@@ -1517,13 +1527,13 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 
 		for (const collection of config.collections) {
 			const nameText = collection.name || 'Untitled';
-			const nameWidth = font.widthOfTextAtSize(nameText, 12);
+			const nameWidth = font.widthOfTextAtSize(nameText, collectionFontSize);
 
 			// Collection name (clickable)
 			page.drawText(nameText, {
-				x: margins.left + 10,
+				x: margins.left + indent,
 				y,
-				size: 12,
+				size: collectionFontSize,
 				font,
 				color: textColor(ctx)
 			});
@@ -1532,20 +1542,20 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 			if (collection.pages > 1) {
 				const pageCountText = `(${collection.pages} pages)`;
 				page.drawText(pageCountText, {
-					x: margins.left + 15 + nameWidth,
+					x: margins.left + s(ctx, 15) + nameWidth,
 					y,
-					size: 9,
+					size: pageCountFontSize,
 					font,
-					color: mutedTextColor(ctx, 0.5)
+					color: mutedTextColor(ctx, 0.85)
 				});
 			}
 
 			// Add pending link on the name only
 			ctx.pendingLinks.push({
 				page,
-				x: margins.left + 10,
-				y: y - 4,
-				width: nameWidth + 5,
+				x: margins.left + indent,
+				y: y - s(ctx, 4),
+				width: nameWidth + s(ctx, 5),
 				height: lineHeight,
 				targetAnchor: `collection-${collection.id}`
 			});
@@ -1558,7 +1568,7 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 	// Write-in slots with chevron links
 	if (config.writeInCollectionSlots > 0) {
 		const chevron = '>';
-		const chevronWidth = font.widthOfTextAtSize(chevron, 12);
+		const chevronWidth = font.widthOfTextAtSize(chevron, collectionFontSize);
 		const chevronX = pageWidth - margins.right - chevronWidth;
 		let currentPage = page;
 
@@ -1567,14 +1577,14 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 			if (y < margins.bottom + lineHeight * 2) {
 				currentPage = addPage(ctx, `collections-${i}`);
 				drawHeader(currentPage, ctx, 'Collections', [{ label: 'Index', anchor: 'index' }], { navType: 'reference' });
-				y = pageHeight - margins.top - 60;
+				y = pageHeight - margins.top - s(ctx, 40);
 			}
 
 			// Line for writing collection name
 			currentPage.drawLine({
-				start: { x: margins.left + 10, y },
-				end: { x: chevronX - 10, y },
-				thickness: 0.5,
+				start: { x: margins.left + indent, y },
+				end: { x: chevronX - indent, y },
+				thickness: s(ctx, 0.5),
 				color: lineColor(ctx)
 			});
 
@@ -1582,17 +1592,17 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 			currentPage.drawText(chevron, {
 				x: chevronX,
 				y,
-				size: 12,
+				size: collectionFontSize,
 				font,
-				color: mutedTextColor(ctx, 0.6)
+				color: mutedTextColor(ctx, 0.8)
 			});
 
 			// Add link on chevron only
 			ctx.pendingLinks.push({
 				page: currentPage,
-				x: chevronX - 5,
-				y: y - 4,
-				width: chevronWidth + 10,
+				x: chevronX - s(ctx, 5),
+				y: y - s(ctx, 4),
+				width: chevronWidth + indent,
 				height: lineHeight,
 				targetAnchor: `write-in-collection-${i}`
 			});
@@ -1736,7 +1746,7 @@ function drawOverlayNavLinks(page: PDFPage, ctx: GeneratorContext, collection: C
 			y,
 			size: navFontSize,
 			font,
-			color: mutedTextColor(ctx, 0.6)
+			color: mutedTextColor(ctx, 0.8)
 		});
 
 		// Add link
@@ -1774,9 +1784,9 @@ function addWriteInCollectionPages(ctx: GeneratorContext, slotIndex: number) {
 
 function drawChecklist(page: PDFPage, ctx: GeneratorContext) {
 	const { margins, pageHeight, pageWidth } = ctx;
-	const startY = pageHeight - margins.top - 50;
-	const lineHeight = 22;
-	const checkboxSize = 10;
+	const startY = pageHeight - margins.top - s(ctx, 40);
+	const lineHeight = s(ctx, 22);
+	const checkboxSize = s(ctx, 10);
 	const checkboxX = margins.left;
 
 	let y = startY;
