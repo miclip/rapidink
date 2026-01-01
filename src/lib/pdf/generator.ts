@@ -868,14 +868,13 @@ function addIntentionPage(ctx: GeneratorContext) {
 	drawHeader(page, ctx, 'Intention', [{ label: 'Index', anchor: 'index' }]);
 	drawDotGrid(page, ctx);
 
-	const { font, margins, pageHeight } = ctx;
-	const y = pageHeight - margins.top - 60;
+	const { font, margins } = ctx;
 
 	page.drawText(
 		'An intention is a commitment to a process. Set your compass for the year.',
 		{
 			x: margins.left,
-			y,
+			y: margins.bottom + 10,
 			size: 10,
 			font,
 			color: mutedTextColor(ctx, 0.6)
@@ -888,14 +887,13 @@ function addGoalsPage(ctx: GeneratorContext) {
 	drawHeader(page, ctx, 'Goals', [{ label: 'Index', anchor: 'index' }]);
 	drawDotGrid(page, ctx);
 
-	const { font, margins, pageHeight } = ctx;
-	const y = pageHeight - margins.top - 60;
+	const { font, margins } = ctx;
 
 	page.drawText(
 		'Goals define outcomes. Transform dreams into tangible targets.',
 		{
 			x: margins.left,
-			y,
+			y: margins.bottom + 10,
 			size: 10,
 			font,
 			color: mutedTextColor(ctx, 0.6)
