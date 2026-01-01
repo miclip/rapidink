@@ -181,7 +181,10 @@ export const DEFAULT_CONFIG: RapidInkConfig = {
 		{ id: '10', name: '' }
 	],
 
-	collections: [],
+	collections: [
+		{ id: 'shopping', name: 'Shopping List', pages: 2, template: 'checklist' },
+		{ id: 'food-log', name: 'Food Log', pages: 5, template: 'dotgrid' }
+	],
 	writeInCollectionSlots: 20,
 	writeInCollectionPages: 2,
 

@@ -1006,7 +1006,7 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 	}
 	drawHeader(timelinePage, ctx, monthName, headerLinks, { linkOverrides: { habits: habitAnchor } });
 
-	// Apply user's chosen page background
+	// Draw background pattern based on user's visibility setting (dots/grid/lines/blank)
 	drawDotGrid(timelinePage, ctx);
 
 	const { font, margins, pageHeight } = ctx;
@@ -1061,12 +1061,15 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 			});
 		}
 
-		timelinePage.drawLine({
-			start: { x: margins.left + 40, y: y - 2 },
-			end: { x: ctx.pageWidth - margins.right, y: y - 2 },
-			thickness: 0.25,
-			color: lineColor(ctx)
-		});
+		// Only draw day separator lines if user has enabled lines in visibility settings
+		if (config.dotStyle === 'lines') {
+			timelinePage.drawLine({
+				start: { x: margins.left + 40, y: y - 2 },
+				end: { x: ctx.pageWidth - margins.right, y: y - 2 },
+				thickness: 0.25,
+				color: lineColor(ctx)
+			});
+		}
 
 		y -= lineHeight;
 	}

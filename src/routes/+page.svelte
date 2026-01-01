@@ -646,10 +646,10 @@
 			</button>
 
 			<button
-				class="btn btn-secondary mt-1"
+				class="btn btn-primary mt-1"
 				style="width: 100%;"
 				on:click={handleGenerateFull}
-				disabled={generating}
+				disabled={generating || !pdfUrl}
 			>
 				Generate Full Year PDF
 			</button>
