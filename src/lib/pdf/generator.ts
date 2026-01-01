@@ -1155,12 +1155,18 @@ function addWeeklyPages(ctx: GeneratorContext, weekNumber: number) {
 	const weekEnd = weekStart.add(6, 'day');
 	const weekLabel = `Week ${weekNumber}: ${weekStart.format('MMM D')} - ${weekEnd.format('MMM D')}`;
 
+	// Override nav links to point to current month/week
+	const linkOverrides: Record<string, string> = {
+		monthly: `month-${weekStart.month()}-timeline`,
+		weekly: `week-${weekNumber}-action`
+	};
+
 	// Action plan page
 	const actionPage = addPage(ctx, `week-${weekNumber}-action`);
 	drawHeader(actionPage, ctx, `Weekly Action Plan`, [
 		{ label: 'Index', anchor: 'index' },
 		{ label: 'Month', anchor: `month-${weekStart.month()}-timeline` }
-	]);
+	], { linkOverrides });
 
 	const { font, margins, pageHeight } = ctx;
 
@@ -1180,7 +1186,7 @@ function addWeeklyPages(ctx: GeneratorContext, weekNumber: number) {
 		drawHeader(reflectionPage, ctx, `Weekly Reflection`, [
 			{ label: 'Index', anchor: 'index' },
 			{ label: 'Week', anchor: `week-${weekNumber}-action` }
-		]);
+		], { linkOverrides });
 
 		reflectionPage.drawText(weekLabel, {
 			x: margins.left,
@@ -1212,7 +1218,13 @@ function addDailyPage(ctx: GeneratorContext, date: dayjs.Dayjs) {
 		headerLinks.push({ label: 'Week', anchor: `week-${weekNumber}-action` });
 	}
 
-	drawHeader(page, ctx, `${displayDate} ${dayOfWeek}`, headerLinks);
+	// Override nav links to point to current month/week
+	const linkOverrides: Record<string, string> = {
+		monthly: `month-${date.month()}-timeline`,
+		weekly: `week-${weekNumber}-action`
+	};
+
+	drawHeader(page, ctx, `${displayDate} ${dayOfWeek}`, headerLinks, { linkOverrides });
 
 	drawDotGrid(page, ctx);
 
