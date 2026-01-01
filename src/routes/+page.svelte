@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { PDFDocument, PDFName } from 'pdf-lib';
+	import { PDFDocument, PDFName, PDFHexString, PDFString } from 'pdf-lib';
 	import { DEVICES, getDevicesByCategory } from '$lib/devices';
 	import { DEFAULT_CONFIG, type RapidInkConfig, type Habit, type Collection, type NavigationLink } from '$lib/config';
 	import { COUNTRIES, STATES, hasStates, getStatesForCountry } from '$lib/holidays';
@@ -134,8 +134,17 @@
 						if (namesArray && namesArray.asArray) {
 							const arr = namesArray.asArray();
 							for (let i = 0; i < arr.length; i += 2) {
-								const name = arr[i];
-								if (name.toString && name.toString().includes('rapidink-config.json')) {
+								const nameObj = arr[i];
+								// Decode the filename - it may be PDFHexString or PDFString
+								let filename = '';
+								if (nameObj instanceof PDFHexString) {
+									filename = nameObj.decodeText();
+								} else if (nameObj instanceof PDFString) {
+									filename = nameObj.decodeText();
+								} else if (nameObj.toString) {
+									filename = nameObj.toString();
+								}
+								if (filename.includes('rapidink-config.json')) {
 									const fileSpec = arr[i + 1];
 									const efDict = fileSpec.lookup(PDFName.of('EF'));
 									const stream = efDict.lookup(PDFName.of('F'));
