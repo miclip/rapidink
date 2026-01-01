@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { generatePDF } from './generator';
 import { DEFAULT_CONFIG } from '../config';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFHexString, PDFString, PDFRef, decodePDFRawStream } from 'pdf-lib';
 
 describe('PDF Generator', () => {
 	describe('generatePDF', () => {
@@ -25,7 +25,7 @@ describe('PDF Generator', () => {
 			expect(doc.getPageCount()).toBeGreaterThan(0);
 		}, 30000);
 
-		it('should embed config as attachment', async () => {
+		it('should embed config as attachment that can be extracted', async () => {
 			const config = {
 				...DEFAULT_CONFIG,
 				enableWeeklyPages: false,
@@ -35,9 +35,61 @@ describe('PDF Generator', () => {
 			};
 
 			const pdfBytes = await generatePDF(config);
-			// Config is embedded - we can verify by checking file size includes config data
-			expect(pdfBytes.length).toBeGreaterThan(1000);
-		});
+			const pdfDoc = await PDFDocument.load(pdfBytes);
+
+			// Try to extract the embedded config using the same logic as +page.svelte
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const rawAttachments = pdfDoc.catalog.lookup(PDFName.of('Names')) as any;
+			expect(rawAttachments).toBeTruthy();
+
+			const embeddedFiles = rawAttachments!.lookup(PDFName.of('EmbeddedFiles'));
+			expect(embeddedFiles).toBeTruthy();
+
+			const namesArray = embeddedFiles!.lookup(PDFName.of('Names'));
+			expect(namesArray).toBeTruthy();
+			expect(namesArray!.asArray).toBeTruthy();
+
+			const arr = namesArray!.asArray();
+			let foundConfig = false;
+			let extractedConfig: Record<string, unknown> | null = null;
+
+			for (let i = 0; i < arr.length; i += 2) {
+				const nameObj = arr[i];
+				let filename = '';
+				if (nameObj instanceof PDFHexString) {
+					filename = nameObj.decodeText();
+				} else if (nameObj instanceof PDFString) {
+					filename = nameObj.decodeText();
+				} else if (nameObj.toString) {
+					filename = nameObj.toString();
+				}
+
+				if (filename.includes('rapidink-config.json')) {
+					foundConfig = true;
+					// fileSpec may be a PDFRef, need to dereference it first
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					let fileSpec = arr[i + 1] as any;
+					if (fileSpec instanceof PDFRef) {
+						fileSpec = pdfDoc.context.lookup(fileSpec);
+					}
+					const efDict = fileSpec.lookup(PDFName.of('EF'));
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					let stream = efDict.lookup(PDFName.of('F')) as any;
+					if (stream instanceof PDFRef) {
+						stream = pdfDoc.context.lookup(stream);
+					}
+					// Decode the stream (handles FlateDecode compression)
+					const decoded = decodePDFRawStream(stream);
+					const text = new TextDecoder().decode(decoded.decode());
+					extractedConfig = JSON.parse(text);
+					break;
+				}
+			}
+
+			expect(foundConfig).toBe(true);
+			expect(extractedConfig).toBeTruthy();
+			expect(extractedConfig!.year).toBe(config.year);
+		}, 30000);
 
 		it('should report progress during generation', async () => {
 			const config = {

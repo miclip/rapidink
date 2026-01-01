@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { PDFDocument, PDFName, PDFHexString, PDFString } from 'pdf-lib';
+	import { tick } from 'svelte';
+	import { PDFDocument, PDFName, PDFHexString, PDFString, PDFRef, decodePDFRawStream } from 'pdf-lib';
 	import { DEVICES, getDevicesByCategory } from '$lib/devices';
 	import { DEFAULT_CONFIG, type RapidInkConfig, type Habit, type Collection, type NavigationLink } from '$lib/config';
 	import { COUNTRIES, STATES, hasStates, getStatesForCountry } from '$lib/holidays';
@@ -131,7 +132,8 @@
 				const pdfDoc = await PDFDocument.load(arrayBuffer);
 
 				// Try to find the embedded config attachment
-				const rawAttachments = pdfDoc.catalog.lookup(PDFName.of('Names'));
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const rawAttachments = pdfDoc.catalog.lookup(PDFName.of('Names')) as any;
 				if (rawAttachments) {
 					const embeddedFiles = rawAttachments.lookup(PDFName.of('EmbeddedFiles'));
 					if (embeddedFiles) {
@@ -150,14 +152,25 @@
 									filename = nameObj.toString();
 								}
 								if (filename.includes('rapidink-config.json')) {
-									const fileSpec = arr[i + 1];
+									// Dereference PDFRef if needed
+									// eslint-disable-next-line @typescript-eslint/no-explicit-any
+									let fileSpec = arr[i + 1] as any;
+									if (fileSpec instanceof PDFRef) {
+										fileSpec = pdfDoc.context.lookup(fileSpec);
+									}
 									const efDict = fileSpec.lookup(PDFName.of('EF'));
-									const stream = efDict.lookup(PDFName.of('F'));
-									const data = stream.getContents();
-									const text = new TextDecoder().decode(data);
+									// eslint-disable-next-line @typescript-eslint/no-explicit-any
+									let stream = efDict.lookup(PDFName.of('F')) as any;
+									if (stream instanceof PDFRef) {
+										stream = pdfDoc.context.lookup(stream);
+									}
+									// Decode the stream (handles FlateDecode compression)
+									const decoded = decodePDFRawStream(stream);
+									const text = new TextDecoder().decode(decoded.decode());
 									const imported = JSON.parse(text);
 									// Update year to next year when importing
 									config = { ...DEFAULT_CONFIG, ...imported, year: new Date().getFullYear() + 1 };
+									await tick();
 									userMessage = { type: 'success', text: `Config imported! Year updated to ${config.year}` };
 									return;
 								}
@@ -175,11 +188,14 @@
 			try {
 				const imported = JSON.parse(text);
 				config = { ...DEFAULT_CONFIG, ...imported };
+				await tick();
 				userMessage = { type: 'success', text: 'Config imported from JSON' };
 			} catch {
 				userMessage = { type: 'error', text: 'Invalid config file' };
 			}
 		}
+		// Reset the input so the same file can be imported again
+		input.value = '';
 	}
 
 	function handleExportConfig() {
@@ -649,6 +665,7 @@
 					<input type="file" accept=".json,.pdf" on:change={handleImportConfig} style="display:none" />
 				</label>
 			</div>
+			<p class="form-hint mt-1">Your settings are embedded in generated RapidInk PDFs. Import a PDF or JSON to restore your configuration.</p>
 		</div>
 
 		<!-- Generation Buttons -->
