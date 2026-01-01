@@ -108,7 +108,8 @@ export type ProgressCallback = (progress: GeneratorProgress) => void;
 
 export async function generatePDF(
 	config: RapidInkConfig,
-	onProgress?: ProgressCallback
+	onProgress?: ProgressCallback,
+	basePath: string = ''
 ): Promise<Uint8Array> {
 	const doc = await PDFDocument.create();
 
@@ -165,7 +166,7 @@ export async function generatePDF(
 	// Load flow diagram image for guide page
 	let flowDiagramImage: PDFImage | undefined;
 	try {
-		const imageResponse = await fetch('/bujo-flow.png');
+		const imageResponse = await fetch(`${basePath}/bujo-flow.png`);
 		if (imageResponse.ok) {
 			const imageBytes = await imageResponse.arrayBuffer();
 			flowDiagramImage = await doc.embedPng(imageBytes);

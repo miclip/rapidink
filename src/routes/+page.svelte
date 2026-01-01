@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { tick } from 'svelte';
+	import { base } from '$app/paths';
 	import { PDFDocument, PDFName, PDFHexString, PDFString, PDFRef, decodePDFRawStream } from 'pdf-lib';
 	import { DEVICES, getDevicesByCategory } from '$lib/devices';
 	import { DEFAULT_CONFIG, type RapidInkConfig, type Habit, type Collection, type NavigationLink } from '$lib/config';
@@ -75,7 +76,7 @@
 
 			const pdfBytes = await generatePDF(genConfig, (p) => {
 				progress = p;
-			});
+			}, base);
 
 			const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' });
 			pdfUrl = URL.createObjectURL(blob);
