@@ -502,55 +502,6 @@
 				</div>
 			</div>
 
-			<!-- Daily Page Settings -->
-			<div class="accordion-item">
-				<button class="accordion-header" on:click={() => toggleSection('daily')}>
-					<span>Daily Page Settings</span>
-					<span>{openSections.daily ? '-' : '+'}</span>
-				</button>
-				<div class="accordion-content" class:open={openSections.daily}>
-					<div class="form-group">
-						<label class="form-label" for="daily-layout">Daily Page Layout</label>
-						<select id="daily-layout" bind:value={config.dailyLayout}>
-							<option value="freeform">Freeform (dot grid only)</option>
-							<option value="timeblocked">Time-blocked (hourly schedule)</option>
-							<option value="split">Split (morning/afternoon/evening)</option>
-							<option value="schedule">Schedule (time column + notes)</option>
-						</select>
-					</div>
-
-					{#if config.dailyLayout === 'timeblocked' || config.dailyLayout === 'schedule'}
-						<div class="row">
-							<div class="col form-group">
-								<label class="form-label" for="time-start">Start Hour</label>
-								<select id="time-start" bind:value={config.dailyTimeStart}>
-									{#each Array(24) as _, i}
-										<option value={i}>{i}:00</option>
-									{/each}
-								</select>
-							</div>
-							<div class="col form-group">
-								<label class="form-label" for="time-end">End Hour</label>
-								<select id="time-end" bind:value={config.dailyTimeEnd}>
-									{#each Array(24) as _, i}
-										<option value={i}>{i}:00</option>
-									{/each}
-								</select>
-							</div>
-						</div>
-
-						<div class="form-group">
-							<label class="form-label" for="time-increment">Time Increment</label>
-							<select id="time-increment" bind:value={config.dailyTimeIncrement}>
-								<option value={30}>30 minutes</option>
-								<option value={60}>1 hour</option>
-							</select>
-						</div>
-					{/if}
-
-				</div>
-			</div>
-
 			<!-- Monthly Habit Tracker -->
 			<div class="accordion-item">
 				<button class="accordion-header" on:click={() => toggleSection('habits')}>
