@@ -1008,7 +1008,7 @@ function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
 	const dayWidth = (pageWidth - margins.left - margins.right - habitColWidth) / daysInMonth;
 	const rowHeight = 20;
 
-	// Header row with days
+	// Header row - day letters
 	page.drawText('Habit', {
 		x: margins.left,
 		y,
@@ -1016,6 +1016,23 @@ function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
 		font: boldFont
 	});
 
+	// Draw day of week letters
+	for (let day = 1; day <= daysInMonth; day++) {
+		const dayDate = monthDate.date(day);
+		const dayLetter = dayDate.format('dd')[0]; // First letter: M, T, W, T, F, S, S
+		const xPos = margins.left + habitColWidth + (day - 1) * dayWidth;
+
+		page.drawText(dayLetter, {
+			x: xPos,
+			y,
+			size: 6,
+			font,
+			color: mutedTextColor(ctx, 0.5)
+		});
+	}
+	y -= rowHeight * 0.6;
+
+	// Header row - day numbers
 	for (let day = 1; day <= daysInMonth; day++) {
 		const dayDate = monthDate.date(day);
 		const dateStr = dayDate.format('YYYY-MM-DD');
