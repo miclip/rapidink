@@ -734,17 +734,7 @@ function addIndexPages(ctx: GeneratorContext) {
 			currentDay = weekEndDay + 1;
 		}
 
-		y -= lineHeight * 0.9;
-
-		// Separator line
-		page.drawLine({
-			start: { x: margins.left, y: y + lineHeight * 0.3 },
-			end: { x: pageWidth - margins.right, y: y + lineHeight * 0.3 },
-			thickness: 0.5,
-			color: lineColor(ctx)
-		});
-
-		y -= lineHeight * 0.6;
+		y -= lineHeight * 1.5;
 	}
 }
 
