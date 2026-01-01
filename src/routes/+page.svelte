@@ -59,12 +59,10 @@
 				// - 1 month of daily pages (~31 pages)
 				// - 1 month of habit tracker (1 page)
 				// - All collections (year-long)
-				// - A few notes pages
 				genConfig = {
 					...config,
 					sampleMonthCount: 1, // Only generate first month
-					enableWeeklyPages: false, // Skip weekly pages for sample
-					notesPageCount: Math.min(config.notesPageCount, 3) // Max 3 notes pages in sample
+					enableWeeklyPages: false // Skip weekly pages for sample
 				};
 			}
 
@@ -425,18 +423,6 @@
 						<input type="checkbox" bind:checked={config.enableCollections} />
 						Collections Section
 					</label>
-
-					<label class="checkbox-label">
-						<input type="checkbox" bind:checked={config.enableNotesPages} />
-						Notes Pages
-					</label>
-
-					{#if config.enableNotesPages}
-						<div class="form-group mt-1">
-							<label class="form-label" for="notes-count">Number of Notes Pages</label>
-							<input id="notes-count" type="number" bind:value={config.notesPageCount} min="0" max="100" />
-						</div>
-					{/if}
 				</div>
 			</div>
 
