@@ -657,16 +657,18 @@
 			</button>
 
 			<button
-				class="btn btn-primary mt-1"
+				class="btn btn-primary btn-lg mt-1"
 				style="width: 100%;"
 				on:click={handleGenerateFull}
 				disabled={generating || !pdfUrl}
 			>
 				Generate Full Year PDF
 			</button>
+			<p class="form-hint text-center mt-1">
+				Full year generation may take 1-2 minutes.
+			</p>
 
 			<p class="form-hint text-center mt-1">
-				Sample generates a quick preview. Full year includes all 365+ daily pages.<br>
 				<strong>100% client-side</strong> — nothing is logged or sent to any server.
 			</p>
 		</div>
