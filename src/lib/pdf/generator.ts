@@ -1042,10 +1042,15 @@ function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
 	const anchor = month === 0 ? 'habits' : `habits-${month}`;
 	const page = addPage(ctx, anchor);
 
+	// Override nav links to point to current month
+	const linkOverrides: Record<string, string> = {
+		monthly: `month-${month}-timeline`
+	};
+
 	drawHeader(page, ctx, `Habit Tracker ${monthName}`, [
 		{ label: 'Index', anchor: 'index' },
 		{ label: 'Month', anchor: `month-${month}-timeline` }
-	]);
+	], { linkOverrides });
 
 	const { font, boldFont, margins, pageWidth, pageHeight } = ctx;
 	let y = pageHeight - margins.top - 60;
