@@ -243,7 +243,8 @@ export async function generatePDF(
 		const monthCount = config.sampleMonthCount && config.sampleMonthCount > 0 ? config.sampleMonthCount : 12;
 		report('monthly', 0, monthCount, 'Generating monthly pages...');
 		for (let month = 0; month < monthCount; month++) {
-			report('monthly', month + 1, monthCount, `Generating ${dayjs().month(month).format('MMMM')}...`);
+			const { month: actualMonth, year: actualYear } = getActualMonthYear(month, config.year, config.startMonth || 0);
+			report('monthly', month + 1, monthCount, `Generating ${dayjs(`${actualYear}-${actualMonth + 1}-01`).format('MMMM')}...`);
 			addMonthlyPages(ctx, month);
 			// Register 'monthly' alias pointing to first month
 			if (month === 0) {
@@ -591,7 +592,7 @@ function addIndexPages(ctx: GeneratorContext) {
 	drawHeader(page, ctx, 'Index', navLinks, { navType: 'reference' });
 
 	const { font, boldFont, margins, pageHeight, pageWidth, config } = ctx;
-	let y = pageHeight - margins.top - s(ctx, 25);
+	let y = pageHeight - margins.top - s(ctx, 40); // Extra space after header before first month
 	const lineHeight = s(ctx, 13);
 	const fontSize = s(ctx, 12);
 	const smallFontSize = s(ctx, 10);
@@ -604,7 +605,8 @@ function addIndexPages(ctx: GeneratorContext) {
 	const dayWidth = contentWidth / 31;
 
 	for (let month = 0; month < monthCount; month++) {
-		const monthDate = dayjs(`${config.year}-${month + 1}-01`);
+		const { month: actualMonth, year: actualYear } = getActualMonthYear(month, config.year, config.startMonth || 0);
+		const monthDate = dayjs(`${actualYear}-${actualMonth + 1}-01`);
 		const monthName = monthDate.format('MMMM');
 		const daysInMonth = monthDate.daysInMonth();
 
@@ -643,13 +645,13 @@ function addIndexPages(ctx: GeneratorContext) {
 		if (config.enableHabitTracker) {
 			const separator = ' | ';
 			const habText = 'Monthly Habit Tracker';
-			const separatorWidth = font.widthOfTextAtSize(separator, smallFontSize);
-			const habTextWidth = font.widthOfTextAtSize(habText, smallFontSize);
+			const separatorWidth = font.widthOfTextAtSize(separator, tinyFontSize);
+			const habTextWidth = font.widthOfTextAtSize(habText, tinyFontSize);
 
 			page.drawText(separator, {
 				x: xPos,
 				y,
-				size: smallFontSize,
+				size: tinyFontSize,
 				font,
 				color: mutedTextColor(ctx, 0.6)
 			});
@@ -658,7 +660,7 @@ function addIndexPages(ctx: GeneratorContext) {
 			page.drawText(habText, {
 				x: xPos,
 				y,
-				size: smallFontSize,
+				size: tinyFontSize,
 				font,
 				color: mutedTextColor(ctx, 0.6)
 			});
@@ -1072,7 +1074,8 @@ function addFutureLogPages(ctx: GeneratorContext) {
 
 function addMonthlyPages(ctx: GeneratorContext, month: number) {
 	const { config } = ctx;
-	const monthDate = dayjs(`${config.year}-${month + 1}-01`);
+	const { month: actualMonth, year: actualYear } = getActualMonthYear(month, config.year, config.startMonth || 0);
+	const monthDate = dayjs(`${actualYear}-${actualMonth + 1}-01`);
 	const monthName = monthDate.format('MMMM');
 
 	// Get week number for first day of month
@@ -1140,7 +1143,7 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 		if (weekNum !== lastWeekNum) {
 			const weekNumText = `${weekNum}`;
 			const weekNumWidth = font.widthOfTextAtSize(weekNumText, 8);
-			const weekIndicatorX = margins.left + 18;
+			const weekIndicatorX = margins.left + 15;
 
 			timelinePage.drawText(weekNumText, {
 				x: weekIndicatorX,
@@ -1196,7 +1199,8 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 
 function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
 	const { config } = ctx;
-	const monthDate = dayjs(`${config.year}-${month + 1}-01`);
+	const { month: actualMonth, year: actualYear } = getActualMonthYear(month, config.year, config.startMonth || 0);
+	const monthDate = dayjs(`${actualYear}-${actualMonth + 1}-01`);
 	const monthName = monthDate.format('MMMM');
 	const daysInMonth = monthDate.daysInMonth();
 
@@ -1376,12 +1380,13 @@ function drawWeekDayLinks(page: PDFPage, ctx: GeneratorContext, weekNumber: numb
 	xPos += font.widthOfTextAtSize(weekPrefix, 11);
 
 	// Draw each day: "6 M, 7 T, 8 W, 9 T, 10 F, 11 S, 12 S"
+	const dayFontSize = 9;
 	for (let i = 0; i < 7; i++) {
 		const date = weekStart.add(i, 'day');
 		const dayNum = date.date();
 		const dayLetter = date.format('dd')[0]; // M, T, W, T, F, S, S
 		const dayText = `${dayNum} ${dayLetter}`;
-		const dayTextWidth = font.widthOfTextAtSize(dayText, 11);
+		const dayTextWidth = font.widthOfTextAtSize(dayText, dayFontSize);
 		const isWeekend = date.day() === 0 || date.day() === 6;
 		const isInYear = date.year() === config.year;
 
@@ -1398,7 +1403,7 @@ function drawWeekDayLinks(page: PDFPage, ctx: GeneratorContext, weekNumber: numb
 		page.drawText(dayText, {
 			x: xPos,
 			y,
-			size: 11,
+			size: dayFontSize,
 			font,
 			color: dayColor
 		});
@@ -1676,6 +1681,20 @@ function addNotesPage(ctx: GeneratorContext, pageNum: number) {
 }
 
 // Helper functions
+
+/**
+ * Convert planner month index to actual calendar month and year.
+ * Handles year wrapping when startMonth > 0.
+ * @param plannerMonth - Month index in the planner (0-11)
+ * @param baseYear - The configured year
+ * @param startMonth - The month to start from (0-11)
+ * @returns { month: 0-11, year: number }
+ */
+function getActualMonthYear(plannerMonth: number, baseYear: number, startMonth: number): { month: number; year: number } {
+	const actualMonth = (startMonth + plannerMonth) % 12;
+	const yearOffset = Math.floor((startMonth + plannerMonth) / 12);
+	return { month: actualMonth, year: baseYear + yearOffset };
+}
 
 function getWeeksInYear(year: number, weekStart: 'sunday' | 'monday'): number {
 	const lastDay = dayjs(`${year}-12-31`);

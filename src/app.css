@@ -40,13 +40,19 @@ body {
 	display: grid;
 	grid-template-columns: 400px 1fr;
 	gap: 20px;
-	min-height: calc(100vh - 100px);
+	height: calc(100vh - 100px);
+	overflow: hidden;
 }
 
 @media (max-width: 1024px) {
 	.grid {
 		grid-template-columns: 1fr;
 	}
+}
+
+.config-panel {
+	max-height: calc(100vh - 40px);
+	overflow-y: auto;
 }
 
 /* Card */
@@ -149,6 +155,20 @@ input[type="checkbox"] {
 
 .btn-primary:disabled {
 	background: linear-gradient(135deg, #a0aef0 0%, #a085c0 100%);
+	cursor: not-allowed;
+}
+
+.btn-generate {
+	background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+	color: white;
+}
+
+.btn-generate:hover {
+	background: linear-gradient(135deg, #0d7d73 0%, #2cc966 100%);
+}
+
+.btn-generate:disabled {
+	background: linear-gradient(135deg, #7bc4be 0%, #8cf0b5 100%);
 	cursor: not-allowed;
 }
 

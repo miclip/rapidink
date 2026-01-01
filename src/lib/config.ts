@@ -58,6 +58,7 @@ export interface RapidInkConfig {
 
 	// Calendar settings
 	year: number;
+	startMonth: number; // 0-11 (January = 0)
 	weekStart: WeekStart;
 	locale: string;
 	dateFormat: DateFormat;
@@ -145,7 +146,8 @@ export const DEFAULT_CONFIG: RapidInkConfig = {
 	orientation: 'portrait',
 	toolbarPosition: 'left',
 
-	year: new Date().getFullYear() + 1,
+	year: new Date().getMonth() >= 9 ? new Date().getFullYear() + 1 : new Date().getFullYear(),
+	startMonth: 0, // January
 	weekStart: 'monday',
 	locale: 'en-US',
 	dateFormat: 'long',

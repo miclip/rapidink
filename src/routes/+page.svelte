@@ -52,6 +52,7 @@
 		generating = true;
 		progress = null;
 		pdfUrl = null;
+		userMessage = null;
 
 		try {
 			const { generatePDF } = await import('$lib/pdf/generator');
@@ -125,6 +126,7 @@
 	async function handleImportConfig(event: Event) {
 		const input = event.target as HTMLInputElement;
 		if (!input.files?.length) return;
+		userMessage = null;
 
 		const file = input.files[0];
 		if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
@@ -169,8 +171,9 @@
 									const decoded = decodePDFRawStream(stream);
 									const text = new TextDecoder().decode(decoded.decode());
 									const imported = JSON.parse(text);
-									// Update year to next year when importing
-									config = { ...DEFAULT_CONFIG, ...imported, year: new Date().getFullYear() + 1 };
+									// Update year based on current month (next year only after September)
+									const defaultYear = new Date().getMonth() >= 9 ? new Date().getFullYear() + 1 : new Date().getFullYear();
+									config = { ...DEFAULT_CONFIG, ...imported, year: defaultYear };
 									await tick();
 									userMessage = { type: 'success', text: `Config imported! Year updated to ${config.year}` };
 									return;
@@ -304,6 +307,23 @@
 						<div class="col form-group">
 							<label class="form-label" for="year-input">Year</label>
 							<input id="year-input" type="number" bind:value={config.year} min="2024" max="2030" />
+						</div>
+						<div class="col form-group">
+							<label class="form-label" for="start-month">Start Month</label>
+							<select id="start-month" bind:value={config.startMonth}>
+								<option value={0}>January</option>
+								<option value={1}>February</option>
+								<option value={2}>March</option>
+								<option value={3}>April</option>
+								<option value={4}>May</option>
+								<option value={5}>June</option>
+								<option value={6}>July</option>
+								<option value={7}>August</option>
+								<option value={8}>September</option>
+								<option value={9}>October</option>
+								<option value={10}>November</option>
+								<option value={11}>December</option>
+							</select>
 						</div>
 						<div class="col form-group">
 							<label class="form-label" for="week-start">Week Start</label>
@@ -672,7 +692,7 @@
 		<!-- Generation Buttons -->
 		<div class="mt-2">
 			<button
-				class="btn btn-primary btn-lg"
+				class="btn btn-generate btn-lg"
 				style="width: 100%;"
 				on:click={handleGenerate}
 				disabled={generating}
@@ -681,7 +701,7 @@
 			</button>
 
 			<button
-				class="btn btn-primary btn-lg mt-1"
+				class="btn btn-generate btn-lg mt-1"
 				style="width: 100%;"
 				on:click={handleGenerateFull}
 				disabled={generating || !pdfUrl}
@@ -697,9 +717,10 @@
 			</p>
 
 			{#if userMessage}
-				<p class="user-message {userMessage.type} mt-1">
-					{userMessage.text}
-				</p>
+				<div class="user-message {userMessage.type} mt-1">
+					<span>{userMessage.text}</span>
+					<button class="dismiss-btn" on:click={() => userMessage = null}>&times;</button>
+				</div>
 			{/if}
 		</div>
 
@@ -730,7 +751,7 @@
 		</div>
 
 		{#if pdfUrl}
-			<button class="btn btn-primary btn-lg mt-2" style="width: 100%;" on:click={handleDownload}>
+			<button class="btn btn-generate btn-lg mt-2" style="width: 100%;" on:click={handleDownload}>
 				Download PDF {isSampleMode ? '(Sample)' : ''}
 			</button>
 		{/if}
@@ -748,5 +769,25 @@
 		text-align: left;
 		border: none;
 		font-size: 14px;
+	}
+
+	.user-message {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.dismiss-btn {
+		background: none;
+		border: none;
+		font-size: 1.2rem;
+		cursor: pointer;
+		padding: 0 0.25rem;
+		opacity: 0.7;
+	}
+
+	.dismiss-btn:hover {
+		opacity: 1;
 	}
 </style>
