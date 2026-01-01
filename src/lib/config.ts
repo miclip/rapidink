@@ -30,6 +30,7 @@ export type DailyPageLayout = 'freeform' | 'timeblocked' | 'split' | 'schedule';
 export type WeekStart = 'sunday' | 'monday';
 export type DateFormat = 'short' | 'medium' | 'long' | 'numeric';
 export type DotStyle = 'dots' | 'grid' | 'lines' | 'blank';
+export type FontChoice = 'helvetica' | 'times' | 'courier';
 
 export interface RapidInkConfig {
 	// Version for config migration
@@ -93,7 +94,7 @@ export interface RapidInkConfig {
 	notesPageCount: number;
 
 	// Visual settings - global styling
-	fontFamily: string;
+	fontFamily: FontChoice;
 	fontSize: number;
 	textColor: string; // hex color for all text (#000000)
 	lineColor: string; // hex color for all lines/borders (#666666)
@@ -175,7 +176,7 @@ export const DEFAULT_CONFIG: RapidInkConfig = {
 
 	notesPageCount: 30,
 
-	fontFamily: 'Helvetica',
+	fontFamily: 'helvetica',
 	fontSize: 12,
 	textColor: '#000000',
 	lineColor: '#666666',

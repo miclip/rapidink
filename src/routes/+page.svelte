@@ -550,9 +550,19 @@
 						<span class="text-muted">{Math.round(config.dotOpacity * 100)}%</span>
 					</div>
 
-					<div class="form-group">
-						<label class="form-label" for="font-size">Font Size</label>
-						<input id="font-size" type="number" bind:value={config.fontSize} min="8" max="16" />
+					<div class="row">
+						<div class="col form-group">
+							<label class="form-label" for="font-family">Font</label>
+							<select id="font-family" bind:value={config.fontFamily}>
+								<option value="helvetica">Helvetica (Modern)</option>
+								<option value="times">Times (Classic)</option>
+								<option value="courier">Courier (Typewriter)</option>
+							</select>
+						</div>
+						<div class="col form-group">
+							<label class="form-label" for="font-size">Font Size</label>
+							<input id="font-size" type="number" bind:value={config.fontSize} min="8" max="16" />
+						</div>
 					</div>
 
 					<hr style="margin: 1rem 0; border-color: var(--border-color);" />

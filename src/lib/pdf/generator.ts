@@ -96,18 +96,44 @@ export async function generatePDF(
 	const doc = await PDFDocument.create();
 
 	const device = DEVICES[config.device] || DEVICES['remarkable-1-2'];
-	const pageWidth = pxToPoints(device.width, device.dpi);
-	const pageHeight = pxToPoints(device.height, device.dpi);
-	const contentWidth = pxToPoints(getContentWidth(device), device.dpi);
 
-	const font = await doc.embedFont(StandardFonts.Helvetica);
-	const boldFont = await doc.embedFont(StandardFonts.HelveticaBold);
+	// Handle orientation - swap dimensions if landscape is selected
+	// For devices that are naturally landscape (width > height), orientation is ignored
+	const isNaturallyLandscape = device.width > device.height;
+	const shouldSwap = !isNaturallyLandscape && config.orientation === 'landscape';
+
+	const deviceWidth = shouldSwap ? device.height : device.width;
+	const deviceHeight = shouldSwap ? device.width : device.height;
+	const toolbarWidth = shouldSwap ? 0 : device.toolbarWidth; // No toolbar in landscape
+
+	const pageWidth = pxToPoints(deviceWidth, device.dpi);
+	const pageHeight = pxToPoints(deviceHeight, device.dpi);
+	const contentWidth = pxToPoints(deviceWidth - toolbarWidth, device.dpi);
+
+	// Select font based on config
+	let font: PDFFont;
+	let boldFont: PDFFont;
+	switch (config.fontFamily) {
+		case 'times':
+			font = await doc.embedFont(StandardFonts.TimesRoman);
+			boldFont = await doc.embedFont(StandardFonts.TimesRomanBold);
+			break;
+		case 'courier':
+			font = await doc.embedFont(StandardFonts.Courier);
+			boldFont = await doc.embedFont(StandardFonts.CourierBold);
+			break;
+		case 'helvetica':
+		default:
+			font = await doc.embedFont(StandardFonts.Helvetica);
+			boldFont = await doc.embedFont(StandardFonts.HelveticaBold);
+			break;
+	}
 
 	const margins = {
 		top: 40,
-		right: config.handedness === 'left' ? pxToPoints(device.toolbarWidth, device.dpi) + 20 : 20,
+		right: config.handedness === 'left' ? pxToPoints(toolbarWidth, device.dpi) + 20 : 20,
 		bottom: 40,
-		left: config.handedness === 'right' ? pxToPoints(device.toolbarWidth, device.dpi) + 20 : 20
+		left: config.handedness === 'right' ? pxToPoints(toolbarWidth, device.dpi) + 20 : 20
 	};
 
 	const ctx: GeneratorContext = {
