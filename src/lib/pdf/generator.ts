@@ -411,7 +411,13 @@ function drawHeader(
 	const allowedIds = navType === 'reference' ? REFERENCE_NAV_IDS : CALENDAR_NAV_IDS;
 
 	// Calculate nav width first to reserve space
-	const enabledLinks = showNav ? config.navigationLinks.filter(l => l.enabled && allowedIds.includes(l.id)) : [];
+	// Reference pages use 'enabled', calendar pages use 'enabledOnCalendar'
+	const enabledLinks = showNav
+		? config.navigationLinks.filter(l => {
+			const isEnabled = navType === 'reference' ? l.enabled : l.enabledOnCalendar;
+			return isEnabled && allowedIds.includes(l.id);
+		})
+		: [];
 	let totalNavWidth = 0;
 	for (const link of enabledLinks) {
 		const icon = NAV_ICONS[link.id] || link.label.substring(0, 3);

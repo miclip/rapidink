@@ -29,7 +29,8 @@ export interface HolidaySettings {
 export interface NavigationLink {
 	id: string;
 	label: string;
-	enabled: boolean;
+	enabled: boolean; // Enabled on reference pages
+	enabledOnCalendar: boolean; // Enabled on calendar pages
 }
 
 export type DailyPageLayout = 'freeform' | 'timeblocked' | 'split' | 'schedule';
@@ -126,15 +127,15 @@ export interface RapidInkConfig {
 }
 
 export const DEFAULT_NAVIGATION_LINKS: NavigationLink[] = [
-	{ id: 'guide', label: 'Guide', enabled: false },
-	{ id: 'index', label: 'Index', enabled: true },
-	{ id: 'intention', label: 'Intention', enabled: false },
-	{ id: 'goals', label: 'Goals', enabled: false },
-	{ id: 'future-log', label: 'Future Log', enabled: true },
-	{ id: 'monthly', label: 'Month', enabled: true },
-	{ id: 'habits', label: 'Habits', enabled: true },
-	{ id: 'weekly', label: 'Week', enabled: true },
-	{ id: 'collections', label: 'Collections', enabled: true }
+	{ id: 'guide', label: 'Guide', enabled: true, enabledOnCalendar: false },
+	{ id: 'index', label: 'Index', enabled: true, enabledOnCalendar: true },
+	{ id: 'intention', label: 'Intention', enabled: true, enabledOnCalendar: false },
+	{ id: 'goals', label: 'Goals', enabled: true, enabledOnCalendar: false },
+	{ id: 'future-log', label: 'Future Log', enabled: true, enabledOnCalendar: false },
+	{ id: 'monthly', label: 'Month', enabled: true, enabledOnCalendar: true },
+	{ id: 'habits', label: 'Habits', enabled: true, enabledOnCalendar: true },
+	{ id: 'weekly', label: 'Week', enabled: true, enabledOnCalendar: true },
+	{ id: 'collections', label: 'Collections', enabled: true, enabledOnCalendar: true }
 ];
 
 export const DEFAULT_CONFIG: RapidInkConfig = {

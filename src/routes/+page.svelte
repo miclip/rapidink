@@ -16,11 +16,16 @@
 	let openSections: Record<string, boolean> = {
 		general: true,
 		pages: false,
+		navigation: false,
 		daily: false,
 		habits: false,
 		collections: false,
 		visual: false
 	};
+
+	// Navigation link groups
+	const REFERENCE_NAV_IDS = ['guide', 'index', 'intention', 'goals', 'future-log', 'collections'];
+	const CALENDAR_NAV_IDS = ['index', 'monthly', 'habits', 'weekly', 'collections'];
 
 	const einkDevices = getDevicesByCategory('eink');
 	const tabletDevices = getDevicesByCategory('tablet');
@@ -443,6 +448,60 @@
 				</div>
 			</div>
 
+			<!-- Navigation Links -->
+			<div class="accordion-item">
+				<button class="accordion-header" on:click={() => toggleSection('navigation')}>
+					<span>Navigation Links</span>
+					<span>{openSections.navigation ? '-' : '+'}</span>
+				</button>
+				<div class="accordion-content" class:open={openSections.navigation}>
+					<p class="form-hint mb-1">Configure which navigation links appear in page headers.</p>
+
+					<div class="form-group">
+						<p class="form-label">Reference/Yearly Pages</p>
+						<p class="form-hint mb-1">Index, Guide, Intention, Goals, Future Log, Collections</p>
+						{#each config.navigationLinks.filter(l => REFERENCE_NAV_IDS.includes(l.id)) as link}
+							{@const pageEnabled =
+								link.id === 'guide' ? config.enableGuide :
+								link.id === 'index' ? config.enableIndex :
+								link.id === 'future-log' ? config.enableFutureLog :
+								link.id === 'intention' ? config.enableIntention :
+								link.id === 'goals' ? config.enableGoals :
+								link.id === 'collections' ? config.enableCollections :
+								true
+							}
+							<label class="checkbox-label" class:disabled={!pageEnabled}>
+								<input type="checkbox" bind:checked={link.enabled} disabled={!pageEnabled} />
+								{link.label}
+							</label>
+						{/each}
+					</div>
+
+					<div class="form-group">
+						<p class="form-label">Calendar Pages</p>
+						<p class="form-hint mb-1">Monthly, Weekly, Daily, Habit Tracker (defaults: Idx, Mo, Hab, Wk, Col)</p>
+						{#each config.navigationLinks as link}
+							{@const pageEnabled =
+								link.id === 'guide' ? config.enableGuide :
+								link.id === 'index' ? config.enableIndex :
+								link.id === 'monthly' ? config.enableMonthlyPages :
+								link.id === 'weekly' ? config.enableWeeklyPages :
+								link.id === 'future-log' ? config.enableFutureLog :
+								link.id === 'intention' ? config.enableIntention :
+								link.id === 'goals' ? config.enableGoals :
+								link.id === 'habits' ? config.enableHabitTracker :
+								link.id === 'collections' ? config.enableCollections :
+								true
+							}
+							<label class="checkbox-label" class:disabled={!pageEnabled}>
+								<input type="checkbox" bind:checked={link.enabledOnCalendar} disabled={!pageEnabled} />
+								{link.label}
+							</label>
+						{/each}
+					</div>
+				</div>
+			</div>
+
 			<!-- Daily Page Settings -->
 			<div class="accordion-item">
 				<button class="accordion-header" on:click={() => toggleSection('daily')}>
@@ -489,28 +548,6 @@
 						</div>
 					{/if}
 
-					<div class="mt-2">
-						<p class="form-label">Navigation Links</p>
-						<p class="form-hint mb-1">Select which links appear in the header:</p>
-						{#each config.navigationLinks as link}
-							{@const pageEnabled =
-								link.id === 'guide' ? config.enableGuide :
-								link.id === 'index' ? config.enableIndex :
-								link.id === 'monthly' ? config.enableMonthlyPages :
-								link.id === 'weekly' ? config.enableWeeklyPages :
-								link.id === 'future-log' ? config.enableFutureLog :
-								link.id === 'intention' ? config.enableIntention :
-								link.id === 'goals' ? config.enableGoals :
-								link.id === 'habits' ? config.enableHabitTracker :
-								link.id === 'collections' ? config.enableCollections :
-								true
-							}
-							<label class="checkbox-label" class:disabled={!pageEnabled}>
-								<input type="checkbox" bind:checked={link.enabled} disabled={!pageEnabled} />
-								{link.label}
-							</label>
-						{/each}
-					</div>
 				</div>
 			</div>
 
