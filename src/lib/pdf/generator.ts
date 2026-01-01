@@ -506,63 +506,26 @@ function addCoverPage(ctx: GeneratorContext) {
 
 function addIndexPages(ctx: GeneratorContext) {
 	let page = addPage(ctx, 'index');
-	drawHeader(page, ctx, 'Index', [], { showNav: false });
+
+	// Build nav links from enabled sections
+	const navLinks: Array<{ label: string; anchor: string }> = [];
+	if (ctx.config.enableGuide) navLinks.push({ label: 'Guide', anchor: 'guide' });
+	if (ctx.config.enableIntention) navLinks.push({ label: 'Int', anchor: 'intention' });
+	if (ctx.config.enableGoals) navLinks.push({ label: 'Goals', anchor: 'goals' });
+	if (ctx.config.enableFutureLog) navLinks.push({ label: 'Fut', anchor: 'future-log' });
+	if (ctx.config.enableHabitTracker) navLinks.push({ label: 'Hab', anchor: 'habits' });
+	if (ctx.config.enableCollections) navLinks.push({ label: 'Col', anchor: 'collections' });
+
+	drawHeader(page, ctx, 'Index', navLinks, { showNav: false });
 
 	const { font, boldFont, margins, pageHeight, pageWidth, config } = ctx;
-	let y = pageHeight - margins.top - 50;
-	const lineHeight = 16;
+	let y = pageHeight - margins.top - 40;
+	const lineHeight = 14;
 	const monthCount = config.sampleMonthCount && config.sampleMonthCount > 0 ? config.sampleMonthCount : 12;
 	const contentWidth = pageWidth - margins.left - margins.right;
 
-	// Quick Navigation - Main sections (compact horizontal layout)
-	const sections = [
-		{ label: 'Guide', anchor: 'guide', enabled: config.enableGuide },
-		{ label: 'Intention', anchor: 'intention', enabled: config.enableIntention },
-		{ label: 'Goals', anchor: 'goals', enabled: config.enableGoals },
-		{ label: 'Future Log', anchor: 'future-log', enabled: config.enableFutureLog },
-		{ label: 'Habits', anchor: 'habits', enabled: config.enableHabitTracker },
-		{ label: 'Collections', anchor: 'collections', enabled: config.enableCollections }
-	];
-
-	let linkX = margins.left;
-	for (const section of sections) {
-		if (section.enabled) {
-			const textWidth = font.widthOfTextAtSize(section.label, 10);
-
-			page.drawText(section.label, {
-				x: linkX,
-				y,
-				size: 10,
-				font,
-				color: textColor(ctx)
-			});
-
-			ctx.pendingLinks.push({
-				page,
-				x: linkX,
-				y: y - 4,
-				width: textWidth,
-				height: lineHeight,
-				targetAnchor: section.anchor
-			});
-
-			linkX += textWidth + 15;
-		}
-	}
-
-	y -= lineHeight * 2;
-
-	// Separator
-	page.drawLine({
-		start: { x: margins.left, y: y + lineHeight * 0.5 },
-		end: { x: pageWidth - margins.right, y: y + lineHeight * 0.5 },
-		thickness: 0.5,
-		color: lineColor(ctx)
-	});
-	y -= lineHeight;
-
 	// Unified calendar index - one layout for monthly, weekly, daily
-	const monthBlockHeight = lineHeight * 4; // Month name + day letters + days + week indicators
+	const monthBlockHeight = lineHeight * 3.5; // Month name + day letters + days + week indicators
 	const dayWidth = contentWidth / 31;
 
 	for (let month = 0; month < monthCount; month++) {
@@ -571,10 +534,10 @@ function addIndexPages(ctx: GeneratorContext) {
 		const daysInMonth = monthDate.daysInMonth();
 
 		// Check if we need a new page
-		if (y - monthBlockHeight < margins.bottom + 20) {
+		if (y - monthBlockHeight < margins.bottom + 10) {
 			page = addPage(ctx, `index-${month}`);
-			drawHeader(page, ctx, 'Index', [], { showNav: false });
-			y = pageHeight - margins.top - 50;
+			drawHeader(page, ctx, 'Index', navLinks, { showNav: false });
+			y = pageHeight - margins.top - 40;
 		}
 
 		// Month name (clickable to monthly page)
@@ -734,7 +697,7 @@ function addIndexPages(ctx: GeneratorContext) {
 			currentDay = weekEndDay + 1;
 		}
 
-		y -= lineHeight * 1.5;
+		y -= lineHeight * 1.2;
 	}
 }
 
