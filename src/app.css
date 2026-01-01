@@ -134,16 +134,16 @@ input[type="checkbox"] {
 }
 
 .btn-primary {
-	background: var(--color-primary);
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 	color: white;
 }
 
 .btn-primary:hover {
-	background: var(--color-primary-hover);
+	background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
 }
 
 .btn-primary:disabled {
-	background: #a0c4ff;
+	background: linear-gradient(135deg, #a0aef0 0%, #a085c0 100%);
 	cursor: not-allowed;
 }
 
