@@ -5,7 +5,7 @@
 <header>
 	<div>
 		<h1>RapidInk</h1>
-		<span class="tagline">Digital planner generator for digital note-taking devices</span>
+		<span class="tagline">Bullet journal planner generator for e-ink devices</span>
 	</div>
 	<div>
 		<a href="https://github.com/miclip/rapidink" target="_blank" class="btn btn-secondary">GitHub</a>
