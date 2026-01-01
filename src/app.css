@@ -355,3 +355,26 @@ header .tagline {
 .mb-2 { margin-bottom: 16px; }
 .text-muted { color: var(--color-text-muted); }
 .text-center { text-align: center; }
+
+/* User messages */
+.user-message {
+	padding: 8px 12px;
+	border-radius: var(--radius);
+	font-size: 13px;
+	text-align: center;
+}
+
+.user-message.success {
+	background: #d4edda;
+	color: #155724;
+}
+
+.user-message.warning {
+	background: #fff3cd;
+	color: #856404;
+}
+
+.user-message.error {
+	background: #f8d7da;
+	color: #721c24;
+}
