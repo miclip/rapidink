@@ -1072,16 +1072,6 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 			});
 		}
 
-		// Only draw day separator lines if user has enabled lines in visibility settings
-		if (config.dotStyle === 'lines') {
-			timelinePage.drawLine({
-				start: { x: margins.left + 40, y: y - 2 },
-				end: { x: ctx.pageWidth - margins.right, y: y - 2 },
-				thickness: 0.25,
-				color: lineColor(ctx)
-			});
-		}
-
 		y -= lineHeight;
 	}
 
