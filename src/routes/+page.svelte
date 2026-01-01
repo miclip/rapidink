@@ -393,11 +393,23 @@
 						<input type="checkbox" bind:checked={config.enableMonthlyPages} />
 						Monthly Pages (Timeline + Action Plan)
 					</label>
+					{#if config.enableMonthlyPages}
+						<label class="checkbox-label" style="margin-left: 1.5rem;">
+							<input type="checkbox" bind:checked={config.monthlyReflectionEnabled} />
+							Include Monthly Reflection Pages
+						</label>
+					{/if}
 
 					<label class="checkbox-label">
 						<input type="checkbox" bind:checked={config.enableWeeklyPages} />
-						Weekly Pages (Action Plan + Reflection)
+						Weekly Pages (Action Plan)
 					</label>
+					{#if config.enableWeeklyPages}
+						<label class="checkbox-label" style="margin-left: 1.5rem;">
+							<input type="checkbox" bind:checked={config.weeklyReflectionEnabled} />
+							Include Weekly Reflection Pages
+						</label>
+					{/if}
 
 					<label class="checkbox-label">
 						<input type="checkbox" bind:checked={config.enableDailyPages} />
@@ -425,17 +437,6 @@
 							<input id="notes-count" type="number" bind:value={config.notesPageCount} min="0" max="100" />
 						</div>
 					{/if}
-
-					<div class="mt-2">
-						<p class="form-label">Navigation Links on Daily Pages</p>
-						<p class="form-hint mb-1">Select which links appear in the header of each daily page:</p>
-						{#each config.navigationLinks as link}
-							<label class="checkbox-label">
-								<input type="checkbox" bind:checked={link.enabled} />
-								{link.label}
-							</label>
-						{/each}
-					</div>
 				</div>
 			</div>
 
@@ -485,15 +486,16 @@
 						</div>
 					{/if}
 
-					<label class="checkbox-label mt-2">
-						<input type="checkbox" bind:checked={config.weeklyReflectionEnabled} />
-						Include Weekly Reflection Pages
-					</label>
-
-					<label class="checkbox-label">
-						<input type="checkbox" bind:checked={config.monthlyReflectionEnabled} />
-						Include Monthly Reflection Pages
-					</label>
+					<div class="mt-2">
+						<p class="form-label">Navigation Links</p>
+						<p class="form-hint mb-1">Select which links appear in the header:</p>
+						{#each config.navigationLinks as link}
+							<label class="checkbox-label">
+								<input type="checkbox" bind:checked={link.enabled} />
+								{link.label}
+							</label>
+						{/each}
+					</div>
 				</div>
 			</div>
 
