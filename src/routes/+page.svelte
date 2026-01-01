@@ -56,13 +56,13 @@
 				// - All front matter (cover, index, guide, intention, goals)
 				// - Future log (2 pages)
 				// - 1 month of monthly pages (2 pages)
+				// - Weekly pages for weeks in first month (~4-5 pages)
 				// - 1 month of daily pages (~31 pages)
 				// - 1 month of habit tracker (1 page)
 				// - All collections (year-long)
 				genConfig = {
 					...config,
-					sampleMonthCount: 1, // Only generate first month
-					enableWeeklyPages: false // Skip weekly pages for sample
+					sampleMonthCount: 1 // Only generate first month
 				};
 			}
 

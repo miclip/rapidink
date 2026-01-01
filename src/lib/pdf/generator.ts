@@ -226,10 +226,17 @@ export async function generatePDF(
 	}
 
 	if (config.enableWeeklyPages) {
+		// In sample mode, only generate weeks that fall within the sample months
+		const maxMonth = config.sampleMonthCount && config.sampleMonthCount > 0 ? config.sampleMonthCount - 1 : 11;
+		const lastSampleDate = dayjs(`${config.year}-${maxMonth + 1}-01`).endOf('month');
+		const lastWeekInSample = config.weekStart === 'monday' ? lastSampleDate.isoWeek() : lastSampleDate.week();
+
 		const weeksInYear = getWeeksInYear(config.year, config.weekStart);
-		report('weekly', 0, weeksInYear, 'Generating weekly pages...');
-		for (let week = 1; week <= weeksInYear; week++) {
-			report('weekly', week, weeksInYear, `Generating week ${week}...`);
+		const maxWeek = config.sampleMonthCount && config.sampleMonthCount > 0 ? lastWeekInSample : weeksInYear;
+
+		report('weekly', 0, maxWeek, 'Generating weekly pages...');
+		for (let week = 1; week <= maxWeek; week++) {
+			report('weekly', week, maxWeek, `Generating week ${week}...`);
 			addWeeklyPages(ctx, week);
 			// Register 'weekly' alias pointing to first week
 			if (week === 1) {
@@ -261,6 +268,10 @@ export async function generatePDF(
 		addCollectionIndexPages(ctx);
 		for (const collection of config.collections) {
 			addCollectionPages(ctx, collection);
+		}
+		// Generate pages for write-in collection slots
+		for (let i = 0; i < config.writeInCollectionSlots; i++) {
+			addWriteInCollectionPages(ctx, i);
 		}
 	}
 
@@ -1353,7 +1364,7 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 		y -= lineHeight;
 	}
 
-	// Write-in slots
+	// Write-in slots with chevron links
 	if (config.writeInCollectionSlots > 0) {
 		page.drawText('Add Your Collections', {
 			x: margins.left,
@@ -1364,13 +1375,38 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 		});
 		y -= lineHeight * 1.5;
 
+		const chevron = '>';
+		const chevronWidth = font.widthOfTextAtSize(chevron, 12);
+		const chevronX = pageWidth - margins.right - chevronWidth;
+
 		for (let i = 0; i < Math.min(config.writeInCollectionSlots, 20); i++) {
+			// Line for writing collection name
 			page.drawLine({
 				start: { x: margins.left + 10, y },
-				end: { x: pageWidth - margins.right, y },
+				end: { x: chevronX - 10, y },
 				thickness: 0.5,
 				color: lineColor(ctx)
 			});
+
+			// Chevron link
+			page.drawText(chevron, {
+				x: chevronX,
+				y,
+				size: 12,
+				font,
+				color: mutedTextColor(ctx, 0.6)
+			});
+
+			// Add link to write-in collection pages
+			ctx.pendingLinks.push({
+				page,
+				x: margins.left + 10,
+				y: y - 4,
+				width: chevronX + chevronWidth - margins.left - 10,
+				height: lineHeight,
+				targetAnchor: `write-in-collection-${i}`
+			});
+
 			y -= lineHeight;
 		}
 	}
@@ -1393,6 +1429,20 @@ function addCollectionPages(ctx: GeneratorContext, collection: { id: string; nam
 			drawDotGrid(page, ctx);
 		}
 	}
+}
+
+function addWriteInCollectionPages(ctx: GeneratorContext, slotIndex: number) {
+	// Generate a single blank page for each write-in collection slot
+	const anchor = `write-in-collection-${slotIndex}`;
+	const page = addPage(ctx, anchor);
+
+	// Use a placeholder title that user can write over
+	drawHeader(page, ctx, `Collection ${slotIndex + 1}`, [
+		{ label: 'Index', anchor: 'index' },
+		{ label: 'Collections', anchor: 'collections' }
+	]);
+
+	drawDotGrid(page, ctx);
 }
 
 function drawChecklist(page: PDFPage, ctx: GeneratorContext) {
