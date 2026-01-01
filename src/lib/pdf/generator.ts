@@ -386,6 +386,10 @@ function drawDotGrid(page: PDFPage, ctx: GeneratorContext) {
 	}
 }
 
+// Navigation link sets for different page types (ordered by workflow)
+const REFERENCE_NAV_IDS = ['guide', 'index', 'intention', 'goals', 'future-log', 'collections'];
+const CALENDAR_NAV_IDS = ['index', 'monthly', 'habits', 'weekly', 'collections'];
+
 function drawHeader(
 	page: PDFPage,
 	ctx: GeneratorContext,
@@ -394,6 +398,7 @@ function drawHeader(
 	options?: {
 		linkOverrides?: Record<string, string>; // Override link targets (e.g., { habits: 'habits-3' })
 		showNav?: boolean; // Whether to show the navigation bar (default: true)
+		navType?: 'reference' | 'calendar'; // Which nav links to show (default: 'calendar')
 	}
 ) {
 	const { font, boldFont, margins, pageWidth, pageHeight, config } = ctx;
@@ -402,9 +407,11 @@ function drawHeader(
 	const linkHeight = 20; // Touch-friendly height
 	const navGap = 1;
 	const showNav = options?.showNav !== false;
+	const navType = options?.navType || 'calendar';
+	const allowedIds = navType === 'reference' ? REFERENCE_NAV_IDS : CALENDAR_NAV_IDS;
 
 	// Calculate nav width first to reserve space
-	const enabledLinks = showNav ? config.navigationLinks.filter(l => l.enabled) : [];
+	const enabledLinks = showNav ? config.navigationLinks.filter(l => l.enabled && allowedIds.includes(l.id)) : [];
 	let totalNavWidth = 0;
 	for (const link of enabledLinks) {
 		const icon = NAV_ICONS[link.id] || link.label.substring(0, 3);
@@ -519,7 +526,7 @@ function addIndexPages(ctx: GeneratorContext) {
 	if (ctx.config.enableHabitTracker) navLinks.push({ label: 'Hab', anchor: 'habits' });
 	if (ctx.config.enableCollections) navLinks.push({ label: 'Col', anchor: 'collections' });
 
-	drawHeader(page, ctx, 'Index', navLinks);
+	drawHeader(page, ctx, 'Index', navLinks, { navType: 'reference' });
 
 	const { font, boldFont, margins, pageHeight, pageWidth, config } = ctx;
 	let y = pageHeight - margins.top - 40;
@@ -539,7 +546,7 @@ function addIndexPages(ctx: GeneratorContext) {
 		// Check if we need a new page
 		if (y - monthBlockHeight < margins.bottom + 10) {
 			page = addPage(ctx, `index-${month}`);
-			drawHeader(page, ctx, 'Index', navLinks);
+			drawHeader(page, ctx, 'Index', navLinks, { navType: 'reference' });
 			y = pageHeight - margins.top - 40;
 		}
 
@@ -706,7 +713,7 @@ function addIndexPages(ctx: GeneratorContext) {
 
 function addGuidePage(ctx: GeneratorContext) {
 	const page = addPage(ctx, 'guide');
-	drawHeader(page, ctx, 'Guide & Legend', [{ label: 'Index', anchor: 'index' }]);
+	drawHeader(page, ctx, 'Guide & Legend', [{ label: 'Index', anchor: 'index' }], { navType: 'reference' });
 	drawDotGrid(page, ctx);
 
 	const { font, boldFont, margins, pageHeight } = ctx;
@@ -821,7 +828,7 @@ function addGuidePage(ctx: GeneratorContext) {
 
 function addIntentionPage(ctx: GeneratorContext) {
 	const page = addPage(ctx, 'intention');
-	drawHeader(page, ctx, 'Intention', [{ label: 'Index', anchor: 'index' }]);
+	drawHeader(page, ctx, 'Intention', [{ label: 'Index', anchor: 'index' }], { navType: 'reference' });
 	drawDotGrid(page, ctx);
 
 	const { font, margins } = ctx;
@@ -840,7 +847,7 @@ function addIntentionPage(ctx: GeneratorContext) {
 
 function addGoalsPage(ctx: GeneratorContext) {
 	const page = addPage(ctx, 'goals');
-	drawHeader(page, ctx, 'Goals', [{ label: 'Index', anchor: 'index' }]);
+	drawHeader(page, ctx, 'Goals', [{ label: 'Index', anchor: 'index' }], { navType: 'reference' });
 	drawDotGrid(page, ctx);
 
 	const { font, margins } = ctx;
@@ -860,7 +867,7 @@ function addGoalsPage(ctx: GeneratorContext) {
 function addFutureLogPages(ctx: GeneratorContext) {
 	// Page 1: Jan-Jun
 	const page1 = addPage(ctx, 'future-log');
-	drawHeader(page1, ctx, 'Future Log', [], { showNav: false });
+	drawHeader(page1, ctx, 'Future Log', [], { navType: 'reference' });
 	drawDotGrid(page1, ctx);
 
 	const { font, boldFont, margins, pageWidth, pageHeight } = ctx;
@@ -905,7 +912,7 @@ function addFutureLogPages(ctx: GeneratorContext) {
 
 	// Page 2: Jul-Dec
 	const page2 = addPage(ctx, 'future-log-2');
-	drawHeader(page2, ctx, 'Future Log', [], { showNav: false });
+	drawHeader(page2, ctx, 'Future Log', [], { navType: 'reference' });
 	drawDotGrid(page2, ctx);
 	y = pageHeight - margins.top - 60;
 
@@ -1268,7 +1275,7 @@ function addDailyPage(ctx: GeneratorContext, date: dayjs.Dayjs) {
 
 function addCollectionIndexPages(ctx: GeneratorContext) {
 	const page = addPage(ctx, 'collections');
-	drawHeader(page, ctx, 'Collections', [{ label: 'Index', anchor: 'index' }]);
+	drawHeader(page, ctx, 'Collections', [{ label: 'Index', anchor: 'index' }], { navType: 'reference' });
 
 	const { font, boldFont, margins, pageHeight, pageWidth, config } = ctx;
 	let y = pageHeight - margins.top - 60;
@@ -1336,7 +1343,7 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 			// Check if we need a new page
 			if (y < margins.bottom + lineHeight * 2) {
 				currentPage = addPage(ctx, `collections-${i}`);
-				drawHeader(currentPage, ctx, 'Collections', [{ label: 'Index', anchor: 'index' }]);
+				drawHeader(currentPage, ctx, 'Collections', [{ label: 'Index', anchor: 'index' }], { navType: 'reference' });
 				y = pageHeight - margins.top - 60;
 			}
 
@@ -1380,7 +1387,7 @@ function addCollectionPages(ctx: GeneratorContext, collection: { id: string; nam
 		drawHeader(page, ctx, collection.name, [
 			{ label: 'Index', anchor: 'index' },
 			{ label: 'Collections', anchor: 'collections' }
-		]);
+		], { navType: 'reference' });
 
 		if (collection.template === 'checklist') {
 			// Draw checklist with checkboxes
@@ -1404,7 +1411,7 @@ function addWriteInCollectionPages(ctx: GeneratorContext, slotIndex: number) {
 		drawHeader(page, ctx, 'Collection', [
 			{ label: 'Index', anchor: 'index' },
 			{ label: 'Collections', anchor: 'collections' }
-		]);
+		], { navType: 'reference' });
 
 		drawDotGrid(page, ctx);
 	}
@@ -1446,7 +1453,7 @@ function drawChecklist(page: PDFPage, ctx: GeneratorContext) {
 function addNotesPage(ctx: GeneratorContext, pageNum: number) {
 	const anchor = pageNum === 1 ? 'notes' : undefined;
 	const page = addPage(ctx, anchor);
-	drawHeader(page, ctx, 'Notes', [{ label: 'Index', anchor: 'index' }]);
+	drawHeader(page, ctx, 'Notes', [{ label: 'Index', anchor: 'index' }], { navType: 'reference' });
 	drawDotGrid(page, ctx);
 }
 

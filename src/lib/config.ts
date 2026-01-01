@@ -128,12 +128,12 @@ export interface RapidInkConfig {
 export const DEFAULT_NAVIGATION_LINKS: NavigationLink[] = [
 	{ id: 'guide', label: 'Guide', enabled: false },
 	{ id: 'index', label: 'Index', enabled: true },
-	{ id: 'monthly', label: 'Month', enabled: true },
-	{ id: 'weekly', label: 'Week', enabled: true },
-	{ id: 'future-log', label: 'Future Log', enabled: true },
 	{ id: 'intention', label: 'Intention', enabled: false },
 	{ id: 'goals', label: 'Goals', enabled: false },
+	{ id: 'future-log', label: 'Future Log', enabled: true },
+	{ id: 'monthly', label: 'Month', enabled: true },
 	{ id: 'habits', label: 'Habits', enabled: true },
+	{ id: 'weekly', label: 'Week', enabled: true },
 	{ id: 'collections', label: 'Collections', enabled: true }
 ];
 
