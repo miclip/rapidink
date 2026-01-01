@@ -1060,6 +1060,9 @@ function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
 	y -= rowHeight;
 
 	// Habit rows
+	const firstCircleX = margins.left + habitColWidth + dayWidth / 2 - 1;
+	const radius = Math.min(dayWidth / 2 - 2, (rowHeight - 4) / 2 - 1);
+
 	for (const habit of config.habits) {
 		page.drawText(habit.name || '_______________', {
 			x: margins.left,
@@ -1068,11 +1071,19 @@ function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
 			font
 		});
 
+		// Line from habit name area to first circle
+		const lineY = y + (rowHeight - 4) / 2 - 3;
+		page.drawLine({
+			start: { x: margins.left + 2, y: lineY },
+			end: { x: firstCircleX - radius - 3, y: lineY },
+			thickness: 0.5,
+			color: lineColor(ctx)
+		});
+
 		// Circles for each day
 		for (let day = 1; day <= daysInMonth; day++) {
 			const circleX = margins.left + habitColWidth + (day - 1) * dayWidth + dayWidth / 2 - 1;
 			const circleY = y + (rowHeight - 4) / 2 - 3;
-			const radius = Math.min(dayWidth / 2 - 2, (rowHeight - 4) / 2 - 1);
 			page.drawEllipse({
 				x: circleX,
 				y: circleY,
