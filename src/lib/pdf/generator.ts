@@ -1006,7 +1006,7 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 	}
 	drawHeader(timelinePage, ctx, monthName, headerLinks, { linkOverrides: { habits: habitAnchor } });
 
-	// Apply page background pattern (dots/grid/lines) to timeline
+	// Apply user's chosen page background
 	drawDotGrid(timelinePage, ctx);
 
 	const { font, margins, pageHeight } = ctx;
@@ -1352,22 +1352,21 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 
 	// Write-in slots with chevron links
 	if (config.writeInCollectionSlots > 0) {
-		page.drawText('Add Your Collections', {
-			x: margins.left,
-			y,
-			size: 14,
-			font: boldFont,
-			color: textColor(ctx)
-		});
-		y -= lineHeight * 1.5;
-
 		const chevron = '>';
 		const chevronWidth = font.widthOfTextAtSize(chevron, 12);
 		const chevronX = pageWidth - margins.right - chevronWidth;
+		let currentPage = page;
 
-		for (let i = 0; i < Math.min(config.writeInCollectionSlots, 20); i++) {
+		for (let i = 0; i < config.writeInCollectionSlots; i++) {
+			// Check if we need a new page
+			if (y < margins.bottom + lineHeight * 2) {
+				currentPage = addPage(ctx, `collections-${i}`);
+				drawHeader(currentPage, ctx, 'Collections', [{ label: 'Index', anchor: 'index' }]);
+				y = pageHeight - margins.top - 60;
+			}
+
 			// Line for writing collection name
-			page.drawLine({
+			currentPage.drawLine({
 				start: { x: margins.left + 10, y },
 				end: { x: chevronX - 10, y },
 				thickness: 0.5,
@@ -1375,7 +1374,7 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 			});
 
 			// Chevron link
-			page.drawText(chevron, {
+			currentPage.drawText(chevron, {
 				x: chevronX,
 				y,
 				size: 12,
@@ -1385,7 +1384,7 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 
 			// Add link on chevron only
 			ctx.pendingLinks.push({
-				page,
+				page: currentPage,
 				x: chevronX - 5,
 				y: y - 4,
 				width: chevronWidth + 10,
