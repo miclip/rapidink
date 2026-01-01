@@ -406,7 +406,7 @@
 
 					<label class="checkbox-label">
 						<input type="checkbox" bind:checked={config.enableHabitTracker} />
-						Habit Tracker
+						Monthly Habit Tracker
 					</label>
 
 					<label class="checkbox-label">
@@ -497,10 +497,10 @@
 				</div>
 			</div>
 
-			<!-- Habits -->
+			<!-- Monthly Habit Tracker -->
 			<div class="accordion-item">
 				<button class="accordion-header" on:click={() => toggleSection('habits')}>
-					<span>Habits ({config.habits.length})</span>
+					<span>Monthly Habits ({config.habits.length})</span>
 					<span>{openSections.habits ? '-' : '+'}</span>
 				</button>
 				<div class="accordion-content" class:open={openSections.habits}>
