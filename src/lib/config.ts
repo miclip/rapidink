@@ -95,6 +95,7 @@ export interface RapidInkConfig {
 	// Collections
 	collections: Collection[];
 	writeInCollectionSlots: number;
+	writeInCollectionPages: number; // Pages per write-in collection slot
 
 	// Notes pages at end
 	notesPageCount: number;
@@ -182,6 +183,7 @@ export const DEFAULT_CONFIG: RapidInkConfig = {
 
 	collections: [],
 	writeInCollectionSlots: 20,
+	writeInCollectionPages: 2,
 
 	notesPageCount: 30,
 

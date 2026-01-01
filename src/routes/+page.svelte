@@ -105,7 +105,7 @@
 		config.collections = [...config.collections, {
 			id: crypto.randomUUID(),
 			name: '',
-			pages: 5,
+			pages: 2,
 			template: 'dotgrid'
 		}];
 	}
@@ -544,6 +544,11 @@
 						<label class="form-label" for="writein-slots">Write-in Collection Slots</label>
 						<input id="writein-slots" type="number" bind:value={config.writeInCollectionSlots} min="0" max="50" />
 						<p class="form-hint">Blank slots on the collection index for adding collections on-device</p>
+					</div>
+
+					<div class="form-group mt-2">
+						<label class="form-label" for="writein-pages">Pages per Write-in Collection</label>
+						<input id="writein-pages" type="number" bind:value={config.writeInCollectionPages} min="1" max="20" />
 					</div>
 				</div>
 			</div>

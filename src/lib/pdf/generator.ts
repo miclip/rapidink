@@ -1299,7 +1299,7 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 	let y = pageHeight - margins.top - 60;
 	const lineHeight = 22;
 
-	// Pre-defined collections
+	// Pre-defined collections (no chevron, name is clickable)
 	if (config.collections.length > 0) {
 		page.drawText('Collections', {
 			x: margins.left,
@@ -1311,11 +1311,8 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 		y -= lineHeight * 1.5;
 
 		for (const collection of config.collections) {
-			const nameText = collection.name;
+			const nameText = collection.name || 'Untitled';
 			const nameWidth = font.widthOfTextAtSize(nameText, 12);
-			const chevron = '>';
-			const chevronWidth = font.widthOfTextAtSize(chevron, 12);
-			const chevronX = pageWidth - margins.right - chevronWidth;
 
 			// Collection name (clickable)
 			page.drawText(nameText, {
@@ -1338,21 +1335,12 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 				});
 			}
 
-			// Chevron at the end (clickable link)
-			page.drawText(chevron, {
-				x: chevronX,
-				y,
-				size: 12,
-				font,
-				color: mutedTextColor(ctx, 0.6)
-			});
-
-			// Add pending link covering the whole line
+			// Add pending link on the name only
 			ctx.pendingLinks.push({
 				page,
 				x: margins.left + 10,
 				y: y - 4,
-				width: chevronX + chevronWidth - margins.left - 10,
+				width: nameWidth + 5,
 				height: lineHeight,
 				targetAnchor: `collection-${collection.id}`
 			});
@@ -1395,12 +1383,12 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 				color: mutedTextColor(ctx, 0.6)
 			});
 
-			// Add link to write-in collection pages
+			// Add link on chevron only
 			ctx.pendingLinks.push({
 				page,
-				x: margins.left + 10,
+				x: chevronX - 5,
 				y: y - 4,
-				width: chevronX + chevronWidth - margins.left - 10,
+				width: chevronWidth + 10,
 				height: lineHeight,
 				targetAnchor: `write-in-collection-${i}`
 			});
@@ -1430,17 +1418,22 @@ function addCollectionPages(ctx: GeneratorContext, collection: { id: string; nam
 }
 
 function addWriteInCollectionPages(ctx: GeneratorContext, slotIndex: number) {
-	// Generate a single blank page for each write-in collection slot
-	const anchor = `write-in-collection-${slotIndex}`;
-	const page = addPage(ctx, anchor);
+	const { config } = ctx;
+	const pagesPerSlot = config.writeInCollectionPages || 1;
 
-	// Use a placeholder title that user can write over
-	drawHeader(page, ctx, `Collection ${slotIndex + 1}`, [
-		{ label: 'Index', anchor: 'index' },
-		{ label: 'Collections', anchor: 'collections' }
-	]);
+	for (let i = 0; i < pagesPerSlot; i++) {
+		// First page gets the anchor for linking
+		const anchor = i === 0 ? `write-in-collection-${slotIndex}` : undefined;
+		const page = addPage(ctx, anchor);
 
-	drawDotGrid(page, ctx);
+		// Generic title - user can write their own
+		drawHeader(page, ctx, 'Collection', [
+			{ label: 'Index', anchor: 'index' },
+			{ label: 'Collections', anchor: 'collections' }
+		]);
+
+		drawDotGrid(page, ctx);
+	}
 }
 
 function drawChecklist(page: PDFPage, ctx: GeneratorContext) {
