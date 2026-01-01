@@ -20,6 +20,12 @@ export interface CalendarEvent {
 	endTime?: string;
 }
 
+export interface HolidaySettings {
+	enabled: boolean;
+	country: string;
+	state: string;
+}
+
 export interface NavigationLink {
 	id: string;
 	label: string;
@@ -106,6 +112,9 @@ export interface RapidInkConfig {
 	dotSize: number; // px
 	dotOpacity: number; // 0-1
 
+	// Holidays
+	holidays: HolidaySettings;
+
 	// Calendar events (from iCal import)
 	events: CalendarEvent[];
 
@@ -185,6 +194,12 @@ export const DEFAULT_CONFIG: RapidInkConfig = {
 	dotSpacing: 5,
 	dotSize: 1,
 	dotOpacity: 0.3,
+
+	holidays: {
+		enabled: true,
+		country: 'US',
+		state: ''
+	},
 
 	events: [],
 

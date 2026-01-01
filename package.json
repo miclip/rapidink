@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@fontsource/inter": "^5.0.0",
+    "date-holidays": "^3.26.6",
     "dayjs": "^1.11.13",
     "ical.js": "^2.1.0",
     "pdf-lib": "^1.17.1"

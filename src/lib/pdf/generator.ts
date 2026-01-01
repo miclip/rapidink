@@ -6,6 +6,7 @@ import dayOfYear from 'dayjs/plugin/dayOfYear';
 import type { RapidInkConfig } from '../config';
 import { DEVICES, pxToPoints, getContentWidth } from '../devices';
 import { PageRegistry, createInternalLink } from './links';
+import { getHolidaysForYear, type Holiday } from '../holidays';
 
 // Navigation icon mappings (short labels for nav bar)
 const NAV_ICONS: Record<string, string> = {
@@ -78,6 +79,8 @@ interface GeneratorContext {
 	textColor: { r: number; g: number; b: number };
 	lineColor: { r: number; g: number; b: number };
 	lineOpacity: number;
+	// Holidays for the year (keyed by date YYYY-MM-DD)
+	holidays: Map<string, Holiday>;
 }
 
 export interface GeneratorProgress {
@@ -136,6 +139,19 @@ export async function generatePDF(
 		left: config.handedness === 'right' ? pxToPoints(toolbarWidth, device.dpi) + 20 : 20
 	};
 
+	// Load holidays for the year
+	const holidaysMap = new Map<string, Holiday>();
+	if (config.holidays?.enabled) {
+		const holidayList = getHolidaysForYear(
+			config.year,
+			config.holidays.country,
+			config.holidays.state || undefined
+		);
+		for (const h of holidayList) {
+			holidaysMap.set(h.date, h);
+		}
+	}
+
 	const ctx: GeneratorContext = {
 		doc,
 		config,
@@ -150,7 +166,8 @@ export async function generatePDF(
 		pendingLinks: [],
 		textColor: hexToRgb(config.textColor || '#000000'),
 		lineColor: hexToRgb(config.lineColor || '#666666'),
-		lineOpacity: config.lineOpacity ?? 0.8
+		lineOpacity: config.lineOpacity ?? 0.8,
+		holidays: holidaysMap
 	};
 
 	const report = (phase: string, current: number, total: number, message: string) => {
@@ -967,6 +984,7 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 		const isWeekend = date.day() === 0 || date.day() === 6;
 		const dayText = `${day}`;
 		const dateStr = date.format('YYYY-MM-DD');
+		const holiday = ctx.holidays.get(dateStr);
 
 		timelinePage.drawText(dayText, {
 			x: margins.left,
@@ -995,6 +1013,17 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 			font,
 			color: isWeekend ? mutedTextColor(ctx, 0.5) : textColor(ctx)
 		});
+
+		// Show holiday name if present
+		if (holiday) {
+			timelinePage.drawText(holiday.name, {
+				x: margins.left + 45,
+				y,
+				size: 8,
+				font,
+				color: mutedTextColor(ctx, 0.6)
+			});
+		}
 
 		timelinePage.drawLine({
 			start: { x: margins.left + 40, y: y - 2 },
@@ -1188,22 +1217,33 @@ function addDailyPage(ctx: GeneratorContext, date: dayjs.Dayjs) {
 
 	drawDotGrid(page, ctx);
 
+	const { font, margins, pageHeight } = ctx;
+	let y = pageHeight - margins.top - 60;
+
+	// Show holiday if present
+	const holiday = ctx.holidays.get(dateStr);
+	if (holiday) {
+		page.drawText(`★ ${holiday.name}`, {
+			x: margins.left,
+			y,
+			size: 10,
+			font,
+			color: mutedTextColor(ctx, 0.6)
+		});
+		y -= 15;
+	}
+
 	// Add events for this day
 	const dayEvents = config.events.filter(e => e.date === dateStr);
-	if (dayEvents.length > 0) {
-		const { font, margins, pageHeight } = ctx;
-		let y = pageHeight - margins.top - 60;
-
-		for (const event of dayEvents.slice(0, 3)) {
-			page.drawText(`o ${event.title}`, {
-				x: margins.left,
-				y,
-				size: 10,
-				font,
-				color: mutedTextColor(ctx, 0.7)
-			});
-			y -= 15;
-		}
+	for (const event of dayEvents.slice(0, 3)) {
+		page.drawText(`○ ${event.title}`, {
+			x: margins.left,
+			y,
+			size: 10,
+			font,
+			color: mutedTextColor(ctx, 0.7)
+		});
+		y -= 15;
 	}
 }
 

@@ -2,6 +2,7 @@
 	import { PDFDocument, PDFName } from 'pdf-lib';
 	import { DEVICES, getDevicesByCategory } from '$lib/devices';
 	import { DEFAULT_CONFIG, type RapidInkConfig, type Habit, type Collection, type NavigationLink } from '$lib/config';
+	import { COUNTRIES, STATES, hasStates, getStatesForCountry } from '$lib/holidays';
 	import type { GeneratorProgress } from '$lib/pdf/generator';
 
 	let config: RapidInkConfig = { ...DEFAULT_CONFIG };
@@ -23,6 +24,17 @@
 	const einkDevices = getDevicesByCategory('eink');
 	const tabletDevices = getDevicesByCategory('tablet');
 	const printDevices = getDevicesByCategory('print');
+
+	// Reactive: get available states for selected country
+	$: availableStates = hasStates(config.holidays.country)
+		? getStatesForCountry(config.holidays.country)
+		: {};
+	$: showStatesDropdown = Object.keys(availableStates).length > 0;
+
+	// Reset state when country changes
+	function handleCountryChange() {
+		config.holidays.state = '';
+	}
 
 	function toggleSection(section: string) {
 		openSections[section] = !openSections[section];
@@ -298,10 +310,42 @@
 						</select>
 					</div>
 
+					<hr style="margin: 1rem 0; border-color: var(--border-color);" />
+
+					<div class="form-group">
+						<label class="form-check">
+							<input type="checkbox" bind:checked={config.holidays.enabled} />
+							<span>Show public holidays</span>
+						</label>
+					</div>
+
+					{#if config.holidays.enabled}
+						<div class="row">
+							<div class="col form-group">
+								<label class="form-label" for="holiday-country">Country</label>
+								<select id="holiday-country" bind:value={config.holidays.country} on:change={handleCountryChange}>
+									{#each Object.entries(COUNTRIES) as [code, name]}
+										<option value={code}>{name}</option>
+									{/each}
+								</select>
+							</div>
+							{#if showStatesDropdown}
+								<div class="col form-group">
+									<label class="form-label" for="holiday-state">State/Region</label>
+									<select id="holiday-state" bind:value={config.holidays.state}>
+										{#each Object.entries(availableStates) as [code, name]}
+											<option value={code}>{name}</option>
+										{/each}
+									</select>
+								</div>
+							{/if}
+						</div>
+					{/if}
+
 					<div class="form-group mt-2">
 						<label class="form-label" for="ical-import">Import Calendar Events</label>
 						<input id="ical-import" type="file" accept=".ics,.ical" on:change={handleImportICal} />
-						<p class="form-hint">Import from .ics file to auto-populate events on daily pages</p>
+						<p class="form-hint">Import .ics for specific events (year-specific)</p>
 					</div>
 				</div>
 			</div>
