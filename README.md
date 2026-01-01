@@ -39,13 +39,15 @@ npm run build
 
 ## Supported Devices
 
-- reMarkable Paper Pro
-- reMarkable Paper Pro Move
-- reMarkable 2
-- reMarkable 1
-- Supernote A5X / A6X
-- Kindle Scribe
-- Custom dimensions
+Devices marked with a checkbox have been tested.
+
+- [x] reMarkable Paper Pro
+- [ ] reMarkable Paper Pro Move
+- [ ] reMarkable 2
+- [ ] reMarkable 1
+- [ ] Supernote A5X / A6X
+- [ ] Kindle Scribe
+- [ ] Custom dimensions
 
 ## Tech Stack
 
