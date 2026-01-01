@@ -521,7 +521,8 @@ function addIndexPages(ctx: GeneratorContext) {
 				x: linkX,
 				y,
 				size: 10,
-				font
+				font,
+				color: textColor(ctx)
 			});
 
 			ctx.pendingLinks.push({
@@ -570,7 +571,8 @@ function addIndexPages(ctx: GeneratorContext) {
 			x: margins.left,
 			y,
 			size: 12,
-			font: boldFont
+			font: boldFont,
+			color: textColor(ctx)
 		});
 
 		if (config.enableMonthlyPages) {
@@ -638,7 +640,8 @@ function addIndexPages(ctx: GeneratorContext) {
 				x: xPos,
 				y,
 				size: 8,
-				font
+				font,
+				color: textColor(ctx)
 			});
 
 			if (config.enableDailyPages) {
@@ -745,7 +748,8 @@ function addGuidePage(ctx: GeneratorContext) {
 		x: margins.left,
 		y,
 		size: 14,
-		font: boldFont
+		font: boldFont,
+		color: textColor(ctx)
 	});
 	y -= lineHeight * 1.5;
 
@@ -764,13 +768,15 @@ function addGuidePage(ctx: GeneratorContext) {
 			x: margins.left + 20,
 			y,
 			size: 14,
-			font: boldFont
+			font: boldFont,
+			color: textColor(ctx)
 		});
 		page.drawText(meaning, {
 			x: margins.left + 50,
 			y,
 			size: 12,
-			font
+			font,
+			color: textColor(ctx)
 		});
 		y -= lineHeight;
 	}
@@ -782,7 +788,8 @@ function addGuidePage(ctx: GeneratorContext) {
 		x: margins.left,
 		y,
 		size: 14,
-		font: boldFont
+		font: boldFont,
+		color: textColor(ctx)
 	});
 	y -= lineHeight * 1.5;
 
@@ -805,7 +812,8 @@ function addGuidePage(ctx: GeneratorContext) {
 			x: margins.left + 20,
 			y,
 			size: 11,
-			font
+			font,
+			color: textColor(ctx)
 		});
 		y -= lineHeight * 0.9;
 	}
@@ -817,7 +825,8 @@ function addGuidePage(ctx: GeneratorContext) {
 		x: margins.left,
 		y,
 		size: 14,
-		font: boldFont
+		font: boldFont,
+		color: textColor(ctx)
 	});
 	y -= lineHeight * 1.5;
 
@@ -833,7 +842,8 @@ function addGuidePage(ctx: GeneratorContext) {
 			x: margins.left + 20,
 			y,
 			size: 11,
-			font
+			font,
+			color: textColor(ctx)
 		});
 		y -= lineHeight;
 	}
@@ -902,7 +912,8 @@ function addFutureLogPages(ctx: GeneratorContext) {
 			x,
 			y: yPos,
 			size: 12,
-			font: boldFont
+			font: boldFont,
+			color: textColor(ctx)
 		});
 
 		// Add pending link to month page
@@ -941,7 +952,8 @@ function addFutureLogPages(ctx: GeneratorContext) {
 			x,
 			y: yPos,
 			size: 12,
-			font: boldFont
+			font: boldFont,
+			color: textColor(ctx)
 		});
 
 		// Add pending link to month page
@@ -968,10 +980,17 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 	const monthDate = dayjs(`${config.year}-${month + 1}-01`);
 	const monthName = monthDate.format('MMMM');
 
+	// Get week number for first day of month
+	const firstWeekOfMonth = config.weekStart === 'monday' ? monthDate.isoWeek() : monthDate.week();
+
 	// Timeline page
 	const timelinePage = addPage(ctx, `month-${month}-timeline`);
 	const habitAnchor = month === 0 ? 'habits' : `habits-${month}`;
-	drawHeader(timelinePage, ctx, monthName, [], { linkOverrides: { habits: habitAnchor } });
+	const headerLinks = [{ label: 'Index', anchor: 'index' }];
+	if (config.enableWeeklyPages) {
+		headerLinks.push({ label: 'Week', anchor: `week-${firstWeekOfMonth}-action` });
+	}
+	drawHeader(timelinePage, ctx, monthName, headerLinks, { linkOverrides: { habits: habitAnchor } });
 
 	const { font, margins, pageHeight } = ctx;
 	const daysInMonth = monthDate.daysInMonth();
@@ -1037,7 +1056,7 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 
 	// Action plan page
 	const actionPage = addPage(ctx, `month-${month}-action`);
-	drawHeader(actionPage, ctx, `${monthName} - Action Plan`, [], { linkOverrides: { habits: habitAnchor } });
+	drawHeader(actionPage, ctx, `${monthName} - Action Plan`, headerLinks, { linkOverrides: { habits: habitAnchor } });
 	drawDotGrid(actionPage, ctx);
 }
 
@@ -1068,7 +1087,8 @@ function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
 		x: margins.left,
 		y,
 		size: 10,
-		font: boldFont
+		font: boldFont,
+		color: textColor(ctx)
 	});
 
 	// Draw day of week letters
@@ -1097,7 +1117,8 @@ function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
 			x: xPos,
 			y,
 			size: 7,
-			font
+			font,
+			color: textColor(ctx)
 		});
 
 		// Add pending link to daily page (if daily pages enabled)
@@ -1115,30 +1136,34 @@ function addHabitTrackerPage(ctx: GeneratorContext, month: number) {
 	y -= rowHeight;
 
 	// Habit rows
-	const firstCircleX = margins.left + habitColWidth + dayWidth / 2 - 1;
-	const radius = Math.min(dayWidth / 2 - 2, (rowHeight - 4) / 2 - 1);
+	const radius = Math.min(dayWidth / 2 - 2, 6);
 
 	for (const habit of config.habits) {
-		page.drawText(habit.name || '_______________', {
-			x: margins.left,
-			y,
-			size: 9,
-			font
-		});
+		const textY = y - 3; // Align text baseline with circle center
+		const circleY = y - 3;
 
-		// Line from habit name area to first circle
-		const lineY = y + (rowHeight - 4) / 2 - 3;
-		page.drawLine({
-			start: { x: margins.left + 2, y: lineY },
-			end: { x: firstCircleX - radius - 3, y: lineY },
-			thickness: 0.5,
-			color: lineColor(ctx)
-		});
+		// Draw habit name or placeholder line
+		if (habit.name) {
+			page.drawText(habit.name, {
+				x: margins.left,
+				y: textY,
+				size: 9,
+				font,
+				color: textColor(ctx)
+			});
+		} else {
+			// Draw a blank line for write-in habits
+			page.drawLine({
+				start: { x: margins.left, y: circleY },
+				end: { x: margins.left + habitColWidth - 10, y: circleY },
+				thickness: 0.5,
+				color: lineColor(ctx)
+			});
+		}
 
 		// Circles for each day
 		for (let day = 1; day <= daysInMonth; day++) {
-			const circleX = margins.left + habitColWidth + (day - 1) * dayWidth + dayWidth / 2 - 1;
-			const circleY = y + (rowHeight - 4) / 2 - 3;
+			const circleX = margins.left + habitColWidth + (day - 1) * dayWidth + dayWidth / 2;
 			page.drawEllipse({
 				x: circleX,
 				y: circleY,
@@ -1171,7 +1196,8 @@ function addWeeklyPages(ctx: GeneratorContext, weekNumber: number) {
 		x: margins.left,
 		y: pageHeight - margins.top - 50,
 		size: 12,
-		font
+		font,
+		color: textColor(ctx)
 	});
 
 	drawDotGrid(actionPage, ctx);
@@ -1188,7 +1214,8 @@ function addWeeklyPages(ctx: GeneratorContext, weekNumber: number) {
 			x: margins.left,
 			y: pageHeight - margins.top - 50,
 			size: 12,
-			font
+			font,
+			color: textColor(ctx)
 		});
 
 		drawDotGrid(reflectionPage, ctx);
@@ -1261,7 +1288,8 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 			x: margins.left,
 			y,
 			size: 14,
-			font: boldFont
+			font: boldFont,
+			color: textColor(ctx)
 		});
 		y -= lineHeight * 1.5;
 
@@ -1273,7 +1301,8 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 				x: margins.left + 10,
 				y,
 				size: 12,
-				font
+				font,
+				color: textColor(ctx)
 			});
 
 			// Add pending link to collection page
@@ -1297,7 +1326,8 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 			x: margins.left,
 			y,
 			size: 14,
-			font: boldFont
+			font: boldFont,
+			color: textColor(ctx)
 		});
 		y -= lineHeight * 1.5;
 

@@ -619,13 +619,13 @@
 							<input id="text-color" type="color" bind:value={config.textColor} style="width: 100%; height: 2rem;" />
 						</div>
 						<div class="col form-group">
-							<label class="form-label" for="line-color">Line Color</label>
+							<label class="form-label" for="line-color">Line/Dot Color</label>
 							<input id="line-color" type="color" bind:value={config.lineColor} style="width: 100%; height: 2rem;" />
 						</div>
 					</div>
 
 					<div class="form-group">
-						<label class="form-label" for="line-opacity">Line Opacity</label>
+						<label class="form-label" for="line-opacity">Line/Dot Opacity</label>
 						<input id="line-opacity" type="range" bind:value={config.lineOpacity} min="0.1" max="1" step="0.1" />
 						<span class="text-muted">{Math.round(config.lineOpacity * 100)}%</span>
 					</div>
