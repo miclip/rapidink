@@ -10,6 +10,7 @@ import { getHolidaysForYear, type Holiday } from '../holidays';
 
 // Navigation icon mappings (short labels for nav bar)
 const NAV_ICONS: Record<string, string> = {
+	'guide': 'Gu',
 	'index': 'Idx',
 	'monthly': 'Mo',
 	'weekly': 'Wk',
@@ -517,7 +518,7 @@ function addIndexPages(ctx: GeneratorContext) {
 	if (ctx.config.enableHabitTracker) navLinks.push({ label: 'Hab', anchor: 'habits' });
 	if (ctx.config.enableCollections) navLinks.push({ label: 'Col', anchor: 'collections' });
 
-	drawHeader(page, ctx, 'Index', navLinks, { showNav: false });
+	drawHeader(page, ctx, 'Index', navLinks);
 
 	const { font, boldFont, margins, pageHeight, pageWidth, config } = ctx;
 	let y = pageHeight - margins.top - 40;
@@ -537,7 +538,7 @@ function addIndexPages(ctx: GeneratorContext) {
 		// Check if we need a new page
 		if (y - monthBlockHeight < margins.bottom + 10) {
 			page = addPage(ctx, `index-${month}`);
-			drawHeader(page, ctx, 'Index', navLinks, { showNav: false });
+			drawHeader(page, ctx, 'Index', navLinks);
 			y = pageHeight - margins.top - 40;
 		}
 

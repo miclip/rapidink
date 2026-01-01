@@ -126,6 +126,7 @@ export interface RapidInkConfig {
 }
 
 export const DEFAULT_NAVIGATION_LINKS: NavigationLink[] = [
+	{ id: 'guide', label: 'Guide', enabled: false },
 	{ id: 'index', label: 'Index', enabled: true },
 	{ id: 'monthly', label: 'Month', enabled: true },
 	{ id: 'weekly', label: 'Week', enabled: true },

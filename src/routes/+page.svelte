@@ -494,6 +494,7 @@
 						<p class="form-hint mb-1">Select which links appear in the header:</p>
 						{#each config.navigationLinks as link}
 							{@const pageEnabled =
+								link.id === 'guide' ? config.enableGuide :
 								link.id === 'index' ? config.enableIndex :
 								link.id === 'monthly' ? config.enableMonthlyPages :
 								link.id === 'weekly' ? config.enableWeeklyPages :
