@@ -118,6 +118,11 @@ input[type="checkbox"] {
 	cursor: pointer;
 }
 
+.checkbox-label.disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
 /* Buttons */
 .btn {
 	display: inline-flex;

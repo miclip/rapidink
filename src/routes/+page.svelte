@@ -476,8 +476,19 @@
 						<p class="form-label">Navigation Links</p>
 						<p class="form-hint mb-1">Select which links appear in the header:</p>
 						{#each config.navigationLinks as link}
-							<label class="checkbox-label">
-								<input type="checkbox" bind:checked={link.enabled} />
+							{@const pageEnabled =
+								link.id === 'index' ? config.enableIndex :
+								link.id === 'monthly' ? config.enableMonthlyPages :
+								link.id === 'weekly' ? config.enableWeeklyPages :
+								link.id === 'future-log' ? config.enableFutureLog :
+								link.id === 'intention' ? config.enableIntention :
+								link.id === 'goals' ? config.enableGoals :
+								link.id === 'habits' ? config.enableHabitTracker :
+								link.id === 'collections' ? config.enableCollections :
+								true
+							}
+							<label class="checkbox-label" class:disabled={!pageEnabled}>
+								<input type="checkbox" bind:checked={link.enabled} disabled={!pageEnabled} />
 								{link.label}
 							</label>
 						{/each}

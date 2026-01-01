@@ -129,11 +129,11 @@ export const DEFAULT_NAVIGATION_LINKS: NavigationLink[] = [
 	{ id: 'index', label: 'Index', enabled: true },
 	{ id: 'monthly', label: 'Month', enabled: true },
 	{ id: 'weekly', label: 'Week', enabled: true },
-	{ id: 'future-log', label: 'Future Log', enabled: false },
+	{ id: 'future-log', label: 'Future Log', enabled: true },
 	{ id: 'intention', label: 'Intention', enabled: false },
 	{ id: 'goals', label: 'Goals', enabled: false },
-	{ id: 'habits', label: 'Habits', enabled: false },
-	{ id: 'collections', label: 'Collections', enabled: false }
+	{ id: 'habits', label: 'Habits', enabled: true },
+	{ id: 'collections', label: 'Collections', enabled: true }
 ];
 
 export const DEFAULT_CONFIG: RapidInkConfig = {
