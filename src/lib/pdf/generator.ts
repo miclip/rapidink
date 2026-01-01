@@ -1,4 +1,4 @@
-import { PDFDocument, PDFPage, rgb, StandardFonts, PDFFont } from 'pdf-lib';
+import { PDFDocument, PDFPage, rgb, StandardFonts, PDFFont, PDFImage } from 'pdf-lib';
 import dayjs from 'dayjs';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
 import isoWeek from 'dayjs/plugin/isoWeek';
@@ -83,6 +83,8 @@ interface GeneratorContext {
 	lineOpacity: number;
 	// Holidays for the year (keyed by date YYYY-MM-DD)
 	holidays: Map<string, Holiday>;
+	// Flow diagram image for guide page
+	flowDiagramImage?: PDFImage;
 }
 
 export interface GeneratorProgress {
@@ -102,14 +104,16 @@ export async function generatePDF(
 
 	const device = DEVICES[config.device] || DEVICES['remarkable-1-2'];
 
-	// Handle orientation - swap dimensions if landscape is selected
-	// For devices that are naturally landscape (width > height), orientation is ignored
+	// Handle orientation - swap dimensions to match requested orientation
 	const isNaturallyLandscape = device.width > device.height;
-	const shouldSwap = !isNaturallyLandscape && config.orientation === 'landscape';
+	// Swap if: naturally portrait but want landscape, OR naturally landscape but want portrait
+	const shouldSwap = (isNaturallyLandscape && config.orientation === 'portrait') ||
+		(!isNaturallyLandscape && config.orientation === 'landscape');
 
 	const deviceWidth = shouldSwap ? device.height : device.width;
 	const deviceHeight = shouldSwap ? device.width : device.height;
-	const toolbarWidth = shouldSwap ? 0 : device.toolbarWidth; // No toolbar in landscape
+	// Use toolbar in the device's native orientation, disable when swapped
+	const toolbarWidth = shouldSwap ? 0 : device.toolbarWidth;
 
 	const pageWidth = pxToPoints(deviceWidth, device.dpi);
 	const pageHeight = pxToPoints(deviceHeight, device.dpi);
@@ -143,6 +147,18 @@ export async function generatePDF(
 		left: config.toolbarPosition === 'left' ? toolbarPadding + 20 + extraBuffer : 20
 	};
 
+	// Load flow diagram image for guide page
+	let flowDiagramImage: PDFImage | undefined;
+	try {
+		const imageResponse = await fetch('/bujo-flow.png');
+		if (imageResponse.ok) {
+			const imageBytes = await imageResponse.arrayBuffer();
+			flowDiagramImage = await doc.embedPng(imageBytes);
+		}
+	} catch {
+		// Image not available, will fall back to text
+	}
+
 	// Load holidays for the year
 	const holidaysMap = new Map<string, Holiday>();
 	if (config.holidays?.enabled) {
@@ -171,7 +187,8 @@ export async function generatePDF(
 		textColor: hexToRgb(config.textColor || '#000000'),
 		lineColor: hexToRgb(config.lineColor || '#666666'),
 		lineOpacity: config.lineOpacity ?? 0.8,
-		holidays: holidaysMap
+		holidays: holidaysMap,
+		flowDiagramImage
 	};
 
 	const report = (phase: string, current: number, total: number, message: string) => {
@@ -518,6 +535,26 @@ function addCoverPage(ctx: GeneratorContext) {
 		font: boldFont,
 		color: mutedTextColor(ctx, 0.7)
 	});
+
+	// Fine print at bottom of cover
+	const { font, margins } = ctx;
+	const finePrintSize = 7;
+	const finePrintLines = [
+		'This planner uses the Bullet Journal® method. Bullet Journal® is a registered trademark of Lightcage, LLC.',
+		'This project is not affiliated with or endorsed by Bullet Journal® or Ryder Carroll. Learn more at bulletjournal.com'
+	];
+	let finePrintY = margins.bottom + 20;
+	for (const line of finePrintLines.reverse()) {
+		const lineWidth = font.widthOfTextAtSize(line, finePrintSize);
+		page.drawText(line, {
+			x: (pageWidth - lineWidth) / 2,
+			y: finePrintY,
+			size: finePrintSize,
+			font,
+			color: mutedTextColor(ctx, 0.5)
+		});
+		finePrintY += 10;
+	}
 }
 
 function addIndexPages(ctx: GeneratorContext) {
@@ -746,12 +783,16 @@ function addGuidePage(ctx: GeneratorContext) {
 		{ symbol: 'x', meaning: 'Task (complete)' },
 		{ symbol: '>', meaning: 'Task (migrated forward)' },
 		{ symbol: '<', meaning: 'Task (scheduled to future)' },
+		{ symbol: '.', meaning: 'Task (irrelevant)', strikethrough: true },
 		{ symbol: '-', meaning: 'Note' },
 		{ symbol: 'o', meaning: 'Event' },
 		{ symbol: '=', meaning: 'Mood / Feeling' }
 	];
 
-	for (const { symbol, meaning } of symbols) {
+	for (const item of symbols) {
+		const { symbol, meaning } = item;
+		const hasStrikethrough = 'strikethrough' in item && item.strikethrough;
+
 		page.drawText(symbol, {
 			x: margins.left + 20,
 			y,
@@ -766,12 +807,24 @@ function addGuidePage(ctx: GeneratorContext) {
 			font,
 			color: textColor(ctx)
 		});
+
+		// Draw strikethrough line if needed (only through the meaning text)
+		if (hasStrikethrough) {
+			const textWidth = font.widthOfTextAtSize(meaning, 12);
+			page.drawLine({
+				start: { x: margins.left + 50, y: y + 4 },
+				end: { x: margins.left + 50 + textWidth, y: y + 4 },
+				thickness: 1,
+				color: textColor(ctx)
+			});
+		}
+
 		y -= lineHeight;
 	}
 
 	y -= lineHeight;
 
-	// Flow diagram (simplified text version)
+	// Flow diagram - use image if available, otherwise text fallback
 	page.drawText('Planning Flow', {
 		x: margins.left,
 		y,
@@ -781,32 +834,58 @@ function addGuidePage(ctx: GeneratorContext) {
 	});
 	y -= lineHeight * 1.5;
 
-	const flow = [
-		'Intention - What matters to you',
-		'    |',
-		'Goals - Define outcomes',
-		'    |',
-		'Future Log - Capture future events/tasks',
-		'    |',
-		'Monthly Log - Plan the month',
-		'    |',
-		'Weekly Log - Plan & reflect weekly',
-		'    |',
-		'Daily Log - Capture daily thoughts'
-	];
+	if (ctx.flowDiagramImage) {
+		// Draw the flow diagram image
+		const imgWidth = ctx.flowDiagramImage.width;
+		const imgHeight = ctx.flowDiagramImage.height;
+		const availableWidth = ctx.contentWidth - margins.left - margins.right;
+		const maxHeight = 220; // Limit height to leave room for T.A.M.E. section
 
-	for (const line of flow) {
-		page.drawText(line, {
-			x: margins.left + 20,
-			y,
-			size: 11,
-			font,
-			color: textColor(ctx)
+		// Scale to fit available space
+		const scale = Math.min(availableWidth / imgWidth, maxHeight / imgHeight);
+		const drawWidth = imgWidth * scale;
+		const drawHeight = imgHeight * scale;
+
+		// Center the image horizontally
+		const centerX = margins.left + (availableWidth - drawWidth) / 2;
+
+		page.drawImage(ctx.flowDiagramImage, {
+			x: centerX,
+			y: y - drawHeight,
+			width: drawWidth,
+			height: drawHeight
 		});
-		y -= lineHeight * 0.9;
-	}
 
-	y -= lineHeight;
+		y -= drawHeight + lineHeight;
+	} else {
+		// Fallback to text version if image not available
+		const flow = [
+			'Intention - What matters to you',
+			'    |',
+			'Goals - Define outcomes',
+			'    |',
+			'Future Log - Capture future events/tasks',
+			'    |',
+			'Monthly Log - Plan the month',
+			'    |',
+			'Weekly Log - Plan & reflect weekly',
+			'    |',
+			'Daily Log - Capture daily thoughts'
+		];
+
+		for (const line of flow) {
+			page.drawText(line, {
+				x: margins.left + 20,
+				y,
+				size: 11,
+				font,
+				color: textColor(ctx)
+			});
+			y -= lineHeight * 0.9;
+		}
+
+		y -= lineHeight;
+	}
 
 	// T.A.M.E. Reflection
 	page.drawText('Reflection (T.A.M.E.)', {

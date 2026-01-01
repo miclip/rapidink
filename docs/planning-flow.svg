@@ -1,0 +1,79 @@
+<svg viewBox="0 0 420 400" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .label { font-family: Helvetica, sans-serif; font-size: 11px; fill: #333; }
+    .label-muted { font-family: Helvetica, sans-serif; font-size: 10px; fill: #666; }
+    .symbol { font-family: Helvetica, sans-serif; font-size: 14px; font-weight: bold; fill: #333; }
+  </style>
+
+  <!-- Intentions - top right -->
+  <text x="270" y="30" class="label">Intentions</text>
+  <circle cx="280" cy="45" r="4" fill="#333"/>
+
+  <!-- Line from Intentions down-left to Goals -->
+  <line x1="278" y1="49" x2="130" y2="100" stroke="#333" stroke-width="1.5"/>
+
+  <!-- Goals - upper left -->
+  <text x="95" y="95" class="label">Goals</text>
+  <circle cx="125" cy="105" r="4" fill="#333"/>
+
+  <!-- From Goals: branch to Completed -->
+  <line x1="129" y1="105" x2="220" y2="105" stroke="#333" stroke-width="1.5"/>
+  <text x="225" y="100" class="symbol">x</text>
+  <text x="240" y="100" class="label">Completed</text>
+
+  <!-- From Goals: continue down to Future Log -->
+  <path d="M 125 109
+           C 100 130, 60 150, 55 175"
+        fill="none" stroke="#333" stroke-width="1.5"/>
+
+  <!-- Future Log - left side -->
+  <circle cx="55" cy="180" r="4" fill="#333"/>
+  <text x="10" y="170" class="label">Future</text>
+  <text x="10" y="183" class="label">Log</text>
+
+  <!-- The Loop: Future Log -> Monthly -> Weekly -> Daily -->
+  <path d="M 55 184
+           C 40 240, 60 300, 100 330
+           C 160 365, 260 360, 300 320
+           C 350 270, 340 200, 300 175"
+        fill="none" stroke="#333" stroke-width="1.5"/>
+
+  <!-- Monthly - bottom left -->
+  <circle cx="100" cy="330" r="4" fill="#333"/>
+  <text x="70" y="355" class="label">Monthly</text>
+
+  <!-- Weekly - bottom right -->
+  <circle cx="280" cy="340" r="4" fill="#333"/>
+  <text x="285" y="360" class="label">Weekly</text>
+
+  <!-- Daily - right side -->
+  <circle cx="305" cy="175" r="5" fill="#333"/>
+  <text x="315" y="180" class="label">Daily</text>
+
+  <!-- From Daily: Cancelled exits right -->
+  <path d="M 310 172 C 340 160, 370 150, 395 140"
+        fill="none" stroke="#333" stroke-width="1.5"/>
+  <text x="365" y="125" class="label">Cancelled</text>
+
+  <!-- Migrated: from Daily back to Future Log area -->
+  <path d="M 300 170
+           C 250 150, 150 150, 60 175"
+        fill="none" stroke="#333" stroke-width="1.5"/>
+  <text x="170" y="145" class="label-muted">Migrated</text>
+  <!-- Arrow pointing to Future Log -->
+  <polygon points="60,175 68,170 66,178" fill="#333"/>
+
+  <!-- Scheduled: from Daily back to Monthly -->
+  <path d="M 295 185
+           C 250 230, 180 290, 105 325"
+        fill="none" stroke="#333" stroke-width="1.5"/>
+  <text x="175" y="265" class="label-muted">Scheduled</text>
+  <!-- Arrow pointing to Monthly -->
+  <polygon points="105,325 113,319 110,328" fill="#333"/>
+
+  <!-- Flow direction arrows on main loop -->
+  <polygon points="55,220 52,213 58,213" fill="#333"/>
+  <polygon points="180,355 175,348 182,351" fill="#333"/>
+  <polygon points="320,280 323,287 317,287" fill="#333"/>
+
+</svg>
