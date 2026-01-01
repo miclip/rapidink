@@ -907,6 +907,7 @@ function addFutureLogPages(ctx: GeneratorContext) {
 	// Page 1: Jan-Jun
 	const page1 = addPage(ctx, 'future-log');
 	drawHeader(page1, ctx, 'Future Log', [], { showNav: false });
+	drawDotGrid(page1, ctx);
 
 	const { font, boldFont, margins, pageWidth, pageHeight } = ctx;
 	const colWidth = (pageWidth - margins.left - margins.right) / 2;
@@ -951,6 +952,7 @@ function addFutureLogPages(ctx: GeneratorContext) {
 	// Page 2: Jul-Dec
 	const page2 = addPage(ctx, 'future-log-2');
 	drawHeader(page2, ctx, 'Future Log', [], { showNav: false });
+	drawDotGrid(page2, ctx);
 	y = pageHeight - margins.top - 60;
 
 	for (let i = 6; i < 12; i++) {
@@ -1011,8 +1013,8 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 
 	const { font, margins, pageHeight } = ctx;
 	const daysInMonth = monthDate.daysInMonth();
-	let y = pageHeight - margins.top - 60;
-	const lineHeight = (pageHeight - margins.top - margins.bottom - 80) / 31;
+	let y = pageHeight - margins.top - 30; // Align with dot grid start
+	const lineHeight = (pageHeight - margins.top - margins.bottom - 50) / 31;
 
 	for (let day = 1; day <= daysInMonth; day++) {
 		const date = monthDate.date(day);
