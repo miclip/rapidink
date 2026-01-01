@@ -34,7 +34,7 @@ export interface NavigationLink {
 
 export type DailyPageLayout = 'freeform' | 'timeblocked' | 'split' | 'schedule';
 export type WeekStart = 'sunday' | 'monday';
-export type DateFormat = 'short' | 'medium' | 'long' | 'numeric';
+export type DateFormat = 'short' | 'medium' | 'long' | 'numeric' | 'short-intl' | 'medium-intl' | 'long-intl';
 export type DotStyle = 'dots' | 'grid' | 'lines' | 'blank';
 export type FontChoice = 'helvetica' | 'times' | 'courier';
 
@@ -53,7 +53,7 @@ export interface RapidInkConfig {
 	customDpi?: number;
 	customToolbarWidth?: number;
 	orientation: 'portrait' | 'landscape';
-	handedness: 'right' | 'left';
+	toolbarPosition: 'none' | 'left' | 'right' | 'top' | 'bottom';
 
 	// Calendar settings
 	year: number;
@@ -139,14 +139,14 @@ export const DEFAULT_NAVIGATION_LINKS: NavigationLink[] = [
 export const DEFAULT_CONFIG: RapidInkConfig = {
 	version: 1,
 
-	device: 'remarkable-1-2',
+	device: 'remarkable-paper-pro',
 	orientation: 'portrait',
-	handedness: 'right',
+	toolbarPosition: 'left',
 
 	year: new Date().getFullYear() + 1,
 	weekStart: 'monday',
 	locale: 'en-US',
-	dateFormat: 'medium',
+	dateFormat: 'long',
 
 	enableCover: true,
 	enableIndex: true,

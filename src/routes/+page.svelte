@@ -301,10 +301,13 @@
 							</select>
 						</div>
 						<div class="col form-group">
-							<label class="form-label" for="handedness">Handedness</label>
-							<select id="handedness" bind:value={config.handedness}>
-								<option value="right">Right-handed</option>
-								<option value="left">Left-handed</option>
+							<label class="form-label" for="toolbarPosition">Toolbar Position</label>
+							<select id="toolbarPosition" bind:value={config.toolbarPosition}>
+								<option value="none">None</option>
+								<option value="left">Left</option>
+								<option value="right">Right</option>
+								<option value="top">Top</option>
+								<option value="bottom">Bottom</option>
 							</select>
 						</div>
 					</div>
@@ -312,10 +315,13 @@
 					<div class="form-group">
 						<label class="form-label" for="date-format">Date Format</label>
 						<select id="date-format" bind:value={config.dateFormat}>
-							<option value="short">1/15</option>
-							<option value="medium">Jan 15</option>
 							<option value="long">January 15</option>
+							<option value="medium">Jan 15</option>
+							<option value="short">1/15</option>
 							<option value="numeric">15</option>
+							<option value="long-intl">15 January</option>
+							<option value="medium-intl">15 Jan</option>
+							<option value="short-intl">15/1</option>
 						</select>
 					</div>
 

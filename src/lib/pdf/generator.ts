@@ -133,11 +133,12 @@ export async function generatePDF(
 			break;
 	}
 
+	const toolbarPadding = pxToPoints(toolbarWidth, device.dpi);
 	const margins = {
-		top: 40,
-		right: config.handedness === 'left' ? pxToPoints(toolbarWidth, device.dpi) + 20 : 20,
-		bottom: 40,
-		left: config.handedness === 'right' ? pxToPoints(toolbarWidth, device.dpi) + 20 : 20
+		top: config.toolbarPosition === 'top' ? toolbarPadding + 40 : 40,
+		right: config.toolbarPosition === 'right' ? toolbarPadding + 20 : 20,
+		bottom: config.toolbarPosition === 'bottom' ? toolbarPadding + 40 : 40,
+		left: config.toolbarPosition === 'left' ? toolbarPadding + 20 : 20
 	};
 
 	// Load holidays for the year
@@ -1471,6 +1472,12 @@ function formatDate(date: dayjs.Dayjs, format: string): string {
 			return date.format('MMMM D');
 		case 'numeric':
 			return date.format('D');
+		case 'short-intl':
+			return date.format('D/M');
+		case 'medium-intl':
+			return date.format('D MMM');
+		case 'long-intl':
+			return date.format('D MMMM');
 		default:
 			return date.format('MMM D');
 	}
