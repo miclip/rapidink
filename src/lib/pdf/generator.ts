@@ -1013,8 +1013,17 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 
 	const { font, margins, pageHeight } = ctx;
 	const daysInMonth = monthDate.daysInMonth();
-	let y = pageHeight - margins.top - 30; // Align with dot grid start
-	const lineHeight = (pageHeight - margins.top - margins.bottom - 50) / 31;
+
+	// Use dot grid spacing for line height to align with dots/lines
+	const dotSpacing = (config.dotSpacing / 25.4) * 72; // mm to points
+	const lineHeight = dotSpacing;
+
+	// Calculate starting Y to align with dot grid rows
+	const gridTop = pageHeight - margins.top - 30;
+	const gridBottom = margins.bottom;
+	// Find the highest dot row position and offset slightly for text baseline
+	const topDotRow = gridBottom + Math.floor((gridTop - gridBottom) / dotSpacing) * dotSpacing;
+	let y = topDotRow - 3; // Slight offset for text baseline alignment
 
 	for (let day = 1; day <= daysInMonth; day++) {
 		const date = monthDate.date(day);
