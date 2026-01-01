@@ -1223,7 +1223,7 @@ function addDailyPage(ctx: GeneratorContext, date: dayjs.Dayjs) {
 	// Show holiday if present
 	const holiday = ctx.holidays.get(dateStr);
 	if (holiday) {
-		page.drawText(`★ ${holiday.name}`, {
+		page.drawText(`* ${holiday.name}`, {
 			x: margins.left,
 			y,
 			size: 10,
@@ -1236,7 +1236,7 @@ function addDailyPage(ctx: GeneratorContext, date: dayjs.Dayjs) {
 	// Add events for this day
 	const dayEvents = config.events.filter(e => e.date === dateStr);
 	for (const event of dayEvents.slice(0, 3)) {
-		page.drawText(`○ ${event.title}`, {
+		page.drawText(`o ${event.title}`, {
 			x: margins.left,
 			y,
 			size: 10,

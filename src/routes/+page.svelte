@@ -570,12 +570,12 @@
 				</button>
 				<div class="accordion-content" class:open={openSections.visual}>
 					<div class="form-group">
-						<label class="form-label" for="dot-style">Dot Style</label>
+						<label class="form-label" for="dot-style">Page Background</label>
 						<select id="dot-style" bind:value={config.dotStyle}>
-							<option value="dots">Dots</option>
-							<option value="grid">Grid Lines</option>
-							<option value="lines">Horizontal Lines</option>
-							<option value="blank">Blank</option>
+							<option value="dots">Dot Grid (bullet journal style)</option>
+							<option value="grid">Square Grid (graph paper)</option>
+							<option value="lines">Ruled Lines (notebook)</option>
+							<option value="blank">Blank (no background)</option>
 						</select>
 					</div>
 
