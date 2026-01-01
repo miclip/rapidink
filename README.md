@@ -54,6 +54,10 @@ npm run build
 - [Day.js](https://day-js.dev/) - Date manipulation
 - [date-holidays](https://github.com/commenthol/date-holidays) - Holiday data
 
+## See Also
+
+Looking for a traditional planner instead of bullet journal style? Check out [ReCalendarJS](https://github.com/nicolaracco/recalendarjs) - an excellent customizable calendar generator for e-ink devices with classic planner layouts.
+
 ## License
 
 This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License. See [LICENSE](LICENSE) for details.
