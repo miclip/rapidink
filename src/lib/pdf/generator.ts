@@ -135,11 +135,12 @@ export async function generatePDF(
 	}
 
 	const toolbarPadding = pxToPoints(toolbarWidth, device.dpi);
+	const extraBuffer = 15; // Extra space to prevent toolbar overlap
 	const margins = {
-		top: config.toolbarPosition === 'top' ? toolbarPadding + 40 : 40,
-		right: config.toolbarPosition === 'right' ? toolbarPadding + 20 : 20,
-		bottom: config.toolbarPosition === 'bottom' ? toolbarPadding + 40 : 40,
-		left: config.toolbarPosition === 'left' ? toolbarPadding + 20 : 20
+		top: config.toolbarPosition === 'top' ? toolbarPadding + 40 + extraBuffer : 40,
+		right: config.toolbarPosition === 'right' ? toolbarPadding + 20 + extraBuffer : 20,
+		bottom: config.toolbarPosition === 'bottom' ? toolbarPadding + 40 + extraBuffer : 40,
+		left: config.toolbarPosition === 'left' ? toolbarPadding + 20 + extraBuffer : 20
 	};
 
 	// Load holidays for the year

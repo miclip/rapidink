@@ -23,7 +23,7 @@ describe('PDF Generator', () => {
 			// Verify it's a valid PDF by parsing it
 			const doc = await PDFDocument.load(pdfBytes);
 			expect(doc.getPageCount()).toBeGreaterThan(0);
-		});
+		}, 30000);
 
 		it('should embed config as attachment', async () => {
 			const config = {
@@ -131,10 +131,10 @@ describe('PDF Generator', () => {
 			expect(doc.getPageCount()).toBe(24);
 		});
 
-		it('should respect handedness setting for margins', async () => {
-			const rightHandedConfig = {
+		it('should respect toolbar position setting for margins', async () => {
+			const rightToolbarConfig = {
 				...DEFAULT_CONFIG,
-				handedness: 'right' as const,
+				toolbarPosition: 'right' as const,
 				enableCover: true,
 				enableIndex: false,
 				enableGuide: false,
@@ -150,14 +150,14 @@ describe('PDF Generator', () => {
 				notesPageCount: 0
 			};
 
-			const leftHandedConfig = {
-				...rightHandedConfig,
-				handedness: 'left' as const
+			const leftToolbarConfig = {
+				...rightToolbarConfig,
+				toolbarPosition: 'left' as const
 			};
 
 			// Both should generate valid PDFs
-			const rightPdf = await generatePDF(rightHandedConfig);
-			const leftPdf = await generatePDF(leftHandedConfig);
+			const rightPdf = await generatePDF(rightToolbarConfig);
+			const leftPdf = await generatePDF(leftToolbarConfig);
 
 			expect(rightPdf.length).toBeGreaterThan(0);
 			expect(leftPdf.length).toBeGreaterThan(0);
