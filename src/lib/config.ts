@@ -169,8 +169,8 @@ export const DEFAULT_CONFIG: RapidInkConfig = {
 	dailyTimeIncrement: 60,
 
 	habits: [
-		{ id: '1', name: '' },
-		{ id: '2', name: '' },
+		{ id: '1', name: 'Exercise' },
+		{ id: '2', name: 'Spanish' },
 		{ id: '3', name: '' },
 		{ id: '4', name: '' },
 		{ id: '5', name: '' },
