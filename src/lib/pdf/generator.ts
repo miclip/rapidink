@@ -13,6 +13,7 @@ const NAV_ICONS: Record<string, string> = {
 	'index': 'Idx',
 	'monthly': 'Mo',
 	'weekly': 'Wk',
+	'future-log': 'Fut',
 	'intention': 'Int',
 	'goals': 'Go',
 	'habits': 'Hab',
@@ -600,13 +601,15 @@ function addIndexPages(ctx: GeneratorContext) {
 				color: mutedTextColor(ctx, 0.6)
 			});
 
+			// Use correct anchor: 'habits' for month 0, 'habits-N' for others
+			const habitAnchor = month === 0 ? 'habits' : `habits-${month}`;
 			ctx.pendingLinks.push({
 				page,
 				x: habX - 2,
 				y: y - 4,
 				width: habTextWidth + 4,
 				height: lineHeight,
-				targetAnchor: `habits-month-${month}`
+				targetAnchor: habitAnchor
 			});
 		}
 
@@ -992,6 +995,11 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 	}
 	drawHeader(timelinePage, ctx, monthName, headerLinks, { linkOverrides: { habits: habitAnchor } });
 
+	// Optional background pattern on timeline
+	if (config.monthlyTimelineBackground) {
+		drawDotGrid(timelinePage, ctx);
+	}
+
 	const { font, margins, pageHeight } = ctx;
 	const daysInMonth = monthDate.daysInMonth();
 	let y = pageHeight - margins.top - 60;
@@ -1278,7 +1286,7 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 	const page = addPage(ctx, 'collections');
 	drawHeader(page, ctx, 'Collections', [{ label: 'Index', anchor: 'index' }]);
 
-	const { font, boldFont, margins, pageHeight, config } = ctx;
+	const { font, boldFont, margins, pageHeight, pageWidth, config } = ctx;
 	let y = pageHeight - margins.top - 60;
 	const lineHeight = 22;
 
@@ -1294,10 +1302,14 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 		y -= lineHeight * 1.5;
 
 		for (const collection of config.collections) {
-			const linkText = `> ${collection.name}`;
-			const textWidth = font.widthOfTextAtSize(linkText, 12);
+			const nameText = collection.name;
+			const nameWidth = font.widthOfTextAtSize(nameText, 12);
+			const chevron = '>';
+			const chevronWidth = font.widthOfTextAtSize(chevron, 12);
+			const chevronX = pageWidth - margins.right - chevronWidth;
 
-			page.drawText(linkText, {
+			// Collection name (clickable)
+			page.drawText(nameText, {
 				x: margins.left + 10,
 				y,
 				size: 12,
@@ -1305,12 +1317,33 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 				color: textColor(ctx)
 			});
 
-			// Add pending link to collection page
+			// Page count indicator if multiple pages
+			if (collection.pages > 1) {
+				const pageCountText = `(${collection.pages} pages)`;
+				page.drawText(pageCountText, {
+					x: margins.left + 15 + nameWidth,
+					y,
+					size: 9,
+					font,
+					color: mutedTextColor(ctx, 0.5)
+				});
+			}
+
+			// Chevron at the end (clickable link)
+			page.drawText(chevron, {
+				x: chevronX,
+				y,
+				size: 12,
+				font,
+				color: mutedTextColor(ctx, 0.6)
+			});
+
+			// Add pending link covering the whole line
 			ctx.pendingLinks.push({
 				page,
 				x: margins.left + 10,
 				y: y - 4,
-				width: textWidth,
+				width: chevronX + chevronWidth - margins.left - 10,
 				height: lineHeight,
 				targetAnchor: `collection-${collection.id}`
 			});
@@ -1334,7 +1367,7 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 		for (let i = 0; i < Math.min(config.writeInCollectionSlots, 20); i++) {
 			page.drawLine({
 				start: { x: margins.left + 10, y },
-				end: { x: ctx.pageWidth - margins.right, y },
+				end: { x: pageWidth - margins.right, y },
 				thickness: 0.5,
 				color: lineColor(ctx)
 			});
@@ -1345,7 +1378,7 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 
 function addCollectionPages(ctx: GeneratorContext, collection: { id: string; name: string; pages: number; template: string }) {
 	for (let i = 0; i < collection.pages; i++) {
-		const anchor = i === 0 ? `collection-${collection.id}` : undefined;
+		const anchor = i === 0 ? `collection-${collection.id}` : `collection-${collection.id}-${i + 1}`;
 		const page = addPage(ctx, anchor);
 
 		drawHeader(page, ctx, collection.name, [
@@ -1353,9 +1386,45 @@ function addCollectionPages(ctx: GeneratorContext, collection: { id: string; nam
 			{ label: 'Collections', anchor: 'collections' }
 		]);
 
-		if (collection.template !== 'blank') {
+		if (collection.template === 'checklist') {
+			// Draw checklist with checkboxes
+			drawChecklist(page, ctx);
+		} else if (collection.template !== 'blank') {
 			drawDotGrid(page, ctx);
 		}
+	}
+}
+
+function drawChecklist(page: PDFPage, ctx: GeneratorContext) {
+	const { margins, pageHeight, pageWidth } = ctx;
+	const startY = pageHeight - margins.top - 50;
+	const lineHeight = 22;
+	const checkboxSize = 10;
+	const checkboxX = margins.left;
+
+	let y = startY;
+
+	while (y > margins.bottom + lineHeight) {
+		// Draw checkbox square
+		page.drawRectangle({
+			x: checkboxX,
+			y: y - checkboxSize + 2,
+			width: checkboxSize,
+			height: checkboxSize,
+			borderWidth: 0.75,
+			borderColor: lineColor(ctx),
+			color: rgb(1, 1, 1)
+		});
+
+		// Draw line for text
+		page.drawLine({
+			start: { x: checkboxX + checkboxSize + 8, y: y - 2 },
+			end: { x: pageWidth - margins.right, y: y - 2 },
+			thickness: 0.5,
+			color: lineColor(ctx)
+		});
+
+		y -= lineHeight;
 	}
 }
 

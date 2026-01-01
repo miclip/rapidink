@@ -69,6 +69,7 @@ export interface RapidInkConfig {
 	enableGoals: boolean;
 	enableFutureLog: boolean;
 	enableMonthlyPages: boolean;
+	monthlyTimelineBackground: boolean; // Show dot grid on timeline page
 	enableWeeklyPages: boolean;
 	enableDailyPages: boolean;
 	enableHabitTracker: boolean;
@@ -128,6 +129,7 @@ export const DEFAULT_NAVIGATION_LINKS: NavigationLink[] = [
 	{ id: 'index', label: 'Index', enabled: true },
 	{ id: 'monthly', label: 'Month', enabled: true },
 	{ id: 'weekly', label: 'Week', enabled: true },
+	{ id: 'future-log', label: 'Future Log', enabled: false },
 	{ id: 'intention', label: 'Intention', enabled: false },
 	{ id: 'goals', label: 'Goals', enabled: false },
 	{ id: 'habits', label: 'Habits', enabled: false },
@@ -153,6 +155,7 @@ export const DEFAULT_CONFIG: RapidInkConfig = {
 	enableGoals: true,
 	enableFutureLog: true,
 	enableMonthlyPages: true,
+	monthlyTimelineBackground: false,
 	enableWeeklyPages: true,
 	enableDailyPages: true,
 	enableHabitTracker: true,
