@@ -23,7 +23,9 @@ body {
 	font-size: 14px;
 	line-height: 1.5;
 	color: var(--color-text);
-	background: var(--color-bg);
+	background-color: var(--color-bg);
+	background-image: radial-gradient(circle, #d0d0d0 1px, transparent 1px);
+	background-size: 20px 20px;
 }
 
 .container {
@@ -175,7 +177,8 @@ input[type="checkbox"] {
 
 .accordion-header {
 	padding: 12px 16px;
-	background: var(--color-bg);
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	color: white;
 	font-weight: 500;
 	cursor: pointer;
 	display: flex;
@@ -185,7 +188,7 @@ input[type="checkbox"] {
 }
 
 .accordion-header:hover {
-	background: #e9ecef;
+	background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
 }
 
 .accordion-content {
@@ -256,7 +259,6 @@ input[type="checkbox"] {
 /* Header */
 header {
 	background: var(--color-surface);
-	border-bottom: 1px solid var(--color-border);
 	padding: 16px 20px;
 	display: flex;
 	justify-content: space-between;
