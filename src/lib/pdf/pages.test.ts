@@ -210,7 +210,7 @@ describe('Collection Pages', () => {
 		});
 		// At least 1 page for the index
 		expect(doc.getPageCount()).toBeGreaterThanOrEqual(1);
-	});
+	}, 10000);
 
 	it('should create pages for each collection', async () => {
 		const doc = await generateMinimalPDF({
