@@ -123,6 +123,73 @@
 		config.collections = config.collections.filter(c => c.id !== id);
 	}
 
+	function handleTemplateChange(collection: Collection) {
+		// Initialize PDF-specific fields when switching to PDF template
+		if (collection.template === 'pdf') {
+			collection.pdfNavLinks = collection.pdfNavLinks || ['index'];
+			collection.pdfNavPosition = collection.pdfNavPosition || 'top-right';
+			collection.pages = 0; // Will be set when PDF is uploaded
+		}
+	}
+
+	async function handlePdfUpload(event: Event, collection: Collection) {
+		const input = event.target as HTMLInputElement;
+		if (!input.files?.length) return;
+
+		const file = input.files[0];
+		try {
+			const arrayBuffer = await file.arrayBuffer();
+			const pdfDoc = await PDFDocument.load(arrayBuffer);
+
+			// Convert to base64
+			const base64 = btoa(
+				new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+			);
+
+			const pageCount = pdfDoc.getPageCount();
+			collection.pdfData = base64;
+			collection.pdfFilename = file.name;
+			collection.pdfPageCount = pageCount;
+			collection.pdfCopies = collection.pdfCopies || 1;
+			collection.pages = pageCount * collection.pdfCopies;
+
+			// Auto-fill name from filename if empty
+			if (!collection.name) {
+				collection.name = file.name.replace(/\.pdf$/i, '').replace(/[-_]/g, ' ');
+			}
+
+			// Trigger reactivity
+			config.collections = [...config.collections];
+		} catch (err) {
+			userMessage = { type: 'error', text: 'Failed to load PDF: ' + (err as Error).message };
+		}
+	}
+
+	function clearPdfData(collection: Collection) {
+		collection.pdfData = undefined;
+		collection.pdfFilename = undefined;
+		collection.pdfPageCount = undefined;
+		collection.pdfCopies = undefined;
+		collection.pages = 0;
+		config.collections = [...config.collections];
+	}
+
+	function updatePdfCopies(collection: Collection, copies: number) {
+		collection.pdfCopies = copies;
+		collection.pages = (collection.pdfPageCount || 1) * copies;
+		config.collections = [...config.collections];
+	}
+
+	function togglePdfNavLink(collection: Collection, linkId: string, checked: boolean) {
+		if (!collection.pdfNavLinks) collection.pdfNavLinks = [];
+		if (checked && !collection.pdfNavLinks.includes(linkId)) {
+			collection.pdfNavLinks = [...collection.pdfNavLinks, linkId];
+		} else if (!checked) {
+			collection.pdfNavLinks = collection.pdfNavLinks.filter(l => l !== linkId);
+		}
+		config.collections = [...config.collections];
+	}
+
 	async function handleImportConfig(event: Event) {
 		const input = event.target as HTMLInputElement;
 		if (!input.files?.length) return;
@@ -575,20 +642,81 @@
 								<div class="col">
 									<input type="text" bind:value={collection.name} placeholder="Collection name" />
 								</div>
-								<div style="width: 80px;">
-									<input type="number" bind:value={collection.pages} min="1" max="50" />
-								</div>
+								{#if collection.template === 'pdf'}
+									{#if collection.pdfFilename}
+										<div style="width: 80px;">
+											<input
+												type="number"
+												value={collection.pdfCopies || 1}
+												min="1"
+												max="50"
+												on:change={(e) => updatePdfCopies(collection, parseInt(e.currentTarget.value) || 1)}
+											/>
+										</div>
+									{/if}
+								{:else}
+									<div style="width: 80px;">
+										<input type="number" bind:value={collection.pages} min="1" max="50" />
+									</div>
+								{/if}
 								<button class="btn-remove" on:click={() => removeCollection(collection.id)}>x</button>
 							</div>
 							<div class="row mt-1">
-								<select bind:value={collection.template} style="width: auto;">
+								<select bind:value={collection.template} style="width: auto;" on:change={() => handleTemplateChange(collection)}>
 									<option value="dotgrid">Dot Grid</option>
 									<option value="lined">Lined</option>
 									<option value="grid">Grid</option>
 									<option value="checklist">Checklist</option>
 									<option value="blank">Blank</option>
+									<option value="pdf">PDF Template</option>
 								</select>
+								{#if collection.template === 'pdf' && collection.pdfFilename}
+									<span class="text-muted" style="font-size: 12px; margin-left: 8px;">
+										{collection.pdfPageCount} pg × {collection.pdfCopies || 1} = {collection.pages} pages
+									</span>
+								{/if}
 							</div>
+
+							{#if collection.template === 'pdf'}
+								<div class="mt-1">
+									{#if collection.pdfFilename}
+										<p class="text-muted" style="font-size: 12px;">
+											{collection.pdfFilename}
+											<button class="btn-remove" on:click={() => clearPdfData(collection)}>clear</button>
+										</p>
+									{:else}
+										<input
+											type="file"
+											accept=".pdf"
+											on:change={(e) => handlePdfUpload(e, collection)}
+											style="font-size: 12px;"
+										/>
+									{/if}
+
+									<div class="mt-1">
+										<p class="form-hint" style="margin-bottom: 4px;">Overlay nav links:</p>
+										<div style="display: flex; gap: 12px; flex-wrap: wrap;">
+											<label class="checkbox-label" style="font-size: 12px;">
+												<input type="checkbox" checked={collection.pdfNavLinks?.includes('index')} on:change={(e) => togglePdfNavLink(collection, 'index', e.currentTarget.checked)} />
+												Idx
+											</label>
+											<label class="checkbox-label" style="font-size: 12px;">
+												<input type="checkbox" checked={collection.pdfNavLinks?.includes('collections')} on:change={(e) => togglePdfNavLink(collection, 'collections', e.currentTarget.checked)} />
+												Col
+											</label>
+										</div>
+									</div>
+
+									<div class="mt-1">
+										<select bind:value={collection.pdfNavPosition} style="width: auto; font-size: 12px;">
+											<option value="top-right">Top Right</option>
+											<option value="top-left">Top Left</option>
+											<option value="bottom-right">Bottom Right</option>
+											<option value="bottom-left">Bottom Left</option>
+										</select>
+									</div>
+								</div>
+							{/if}
 						</div>
 					{/each}
 

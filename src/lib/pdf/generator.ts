@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
 import isoWeek from 'dayjs/plugin/isoWeek';
 import dayOfYear from 'dayjs/plugin/dayOfYear';
-import type { RapidInkConfig } from '../config';
+import type { RapidInkConfig, Collection } from '../config';
 import { DEVICES, pxToPoints, getContentWidth } from '../devices';
 import { PageRegistry, createInternalLink } from './links';
 import { getHolidaysForYear, type Holiday } from '../holidays';
@@ -305,7 +305,7 @@ export async function generatePDF(
 	if (config.enableCollections) {
 		addCollectionIndexPages(ctx);
 		for (const collection of config.collections) {
-			addCollectionPages(ctx, collection);
+			await addCollectionPages(ctx, collection);
 		}
 		// Generate pages for write-in collection slots
 		for (let i = 0; i < config.writeInCollectionSlots; i++) {
@@ -1602,7 +1602,14 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 	}
 }
 
-function addCollectionPages(ctx: GeneratorContext, collection: { id: string; name: string; pages: number; template: string }) {
+async function addCollectionPages(ctx: GeneratorContext, collection: Collection) {
+	// Handle PDF template collections
+	if (collection.template === 'pdf' && collection.pdfData) {
+		await addPdfCollectionPages(ctx, collection);
+		return;
+	}
+
+	// Standard template handling
 	for (let i = 0; i < collection.pages; i++) {
 		const anchor = i === 0 ? `collection-${collection.id}` : `collection-${collection.id}-${i + 1}`;
 		const page = addPage(ctx, anchor);
@@ -1618,6 +1625,131 @@ function addCollectionPages(ctx: GeneratorContext, collection: { id: string; nam
 		} else if (collection.template !== 'blank') {
 			drawDotGrid(page, ctx);
 		}
+	}
+}
+
+async function addPdfCollectionPages(ctx: GeneratorContext, collection: Collection) {
+	const { doc, registry, pageWidth, pageHeight } = ctx;
+
+	// Decode base64 PDF data
+	const pdfBytes = Uint8Array.from(atob(collection.pdfData!), c => c.charCodeAt(0));
+	const sourcePdf = await PDFDocument.load(pdfBytes);
+	const sourcePageCount = sourcePdf.getPageCount();
+	const copies = collection.pdfCopies || 1;
+
+	// Embed all pages from source PDF for drawing (allows scaling)
+	const embeddedPages = await doc.embedPdf(sourcePdf, Array.from({ length: sourcePageCount }, (_, i) => i));
+
+	let pageIndex = 0;
+	for (let copy = 0; copy < copies; copy++) {
+		for (let i = 0; i < embeddedPages.length; i++) {
+			const embeddedPage = embeddedPages[i];
+			const anchor = pageIndex === 0 ? `collection-${collection.id}` : `collection-${collection.id}-${pageIndex + 1}`;
+
+			// Create a new page at target device dimensions
+			const page = doc.addPage([pageWidth, pageHeight]);
+			registry.registerPage(anchor, page, ctx.currentPageIndex);
+			ctx.currentPageIndex++;
+
+			// Calculate scaling to fit the embedded page into target dimensions
+			const embeddedDims = embeddedPage.size();
+			const scaleX = pageWidth / embeddedDims.width;
+			const scaleY = pageHeight / embeddedDims.height;
+			const scale = Math.min(scaleX, scaleY); // Maintain aspect ratio
+
+			// Center the scaled page
+			const scaledWidth = embeddedDims.width * scale;
+			const scaledHeight = embeddedDims.height * scale;
+			const x = (pageWidth - scaledWidth) / 2;
+			const y = (pageHeight - scaledHeight) / 2;
+
+			// Draw the embedded page scaled to fit
+			page.drawPage(embeddedPage, {
+				x,
+				y,
+				width: scaledWidth,
+				height: scaledHeight
+			});
+
+			// Draw overlay nav links if configured
+			if (collection.pdfNavLinks && collection.pdfNavLinks.length > 0) {
+				drawOverlayNavLinks(page, ctx, collection);
+			}
+
+			pageIndex++;
+		}
+	}
+
+	// Update collection page count to match actual generated pages
+	collection.pages = pageIndex;
+}
+
+function drawOverlayNavLinks(page: PDFPage, ctx: GeneratorContext, collection: Collection) {
+	const { font } = ctx;
+	const { width, height } = page.getSize();
+	const navLinks = collection.pdfNavLinks || [];
+	const position = collection.pdfNavPosition || 'top-right';
+
+	if (navLinks.length === 0) return;
+
+	const navFontSize = s(ctx, 9);
+	const padding = s(ctx, 10);
+	const navGap = s(ctx, 8); // Gap between links (like regular nav)
+	const minLinkWidth = s(ctx, 22);
+
+	// Build nav text parts with anchors
+	const navParts: { text: string; anchor: string; width: number }[] = [];
+	for (const linkId of navLinks) {
+		const label = NAV_ICONS[linkId] || linkId.substring(0, 3);
+		const linkWidth = Math.max(font.widthOfTextAtSize(label, navFontSize) + s(ctx, 4), minLinkWidth);
+		navParts.push({ text: label, anchor: linkId, width: linkWidth });
+	}
+
+	// Calculate total width
+	let totalWidth = navParts.reduce((sum, p) => sum + p.width, 0);
+	totalWidth += navGap * (navParts.length - 1);
+
+	// Determine position
+	let x: number, y: number;
+	if (position === 'top-left') {
+		x = padding;
+		y = height - padding - navFontSize;
+	} else if (position === 'top-right') {
+		x = width - padding - totalWidth;
+		y = height - padding - navFontSize;
+	} else if (position === 'bottom-left') {
+		x = padding;
+		y = padding;
+	} else { // bottom-right
+		x = width - padding - totalWidth;
+		y = padding;
+	}
+
+	// Draw nav links (no separator, just spacing like regular nav)
+	let currentX = x;
+
+	for (let i = 0; i < navParts.length; i++) {
+		const part = navParts[i];
+
+		page.drawText(part.text, {
+			x: currentX + s(ctx, 2),
+			y,
+			size: navFontSize,
+			font,
+			color: mutedTextColor(ctx, 0.6)
+		});
+
+		// Add link
+		ctx.pendingLinks.push({
+			page,
+			x: currentX,
+			y: y - s(ctx, 2),
+			width: part.width,
+			height: navFontSize + s(ctx, 4),
+			targetAnchor: part.anchor
+		});
+
+		currentX += part.width + navGap;
 	}
 }
 

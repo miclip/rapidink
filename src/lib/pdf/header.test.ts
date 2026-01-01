@@ -27,9 +27,9 @@ describe('Navigation Header', () => {
 			const page = doc.addPage([612, 792]);
 
 			const links: NavigationLink[] = [
-				{ id: 'index', label: 'Index', enabled: true },
-				{ id: 'monthly', label: 'Month', enabled: true },
-				{ id: 'weekly', label: 'Week', enabled: true }
+				{ id: 'index', label: 'Index', enabled: true, enabledOnCalendar: true },
+				{ id: 'monthly', label: 'Month', enabled: true, enabledOnCalendar: true },
+				{ id: 'weekly', label: 'Week', enabled: true, enabledOnCalendar: true }
 			];
 
 			const result = await drawNavigationHeader(doc, page, {
@@ -48,9 +48,9 @@ describe('Navigation Header', () => {
 			const page = doc.addPage([612, 792]);
 
 			const links: NavigationLink[] = [
-				{ id: 'index', label: 'Index', enabled: true },
-				{ id: 'monthly', label: 'Month', enabled: false },
-				{ id: 'weekly', label: 'Week', enabled: true }
+				{ id: 'index', label: 'Index', enabled: true, enabledOnCalendar: true },
+				{ id: 'monthly', label: 'Month', enabled: false, enabledOnCalendar: false },
+				{ id: 'weekly', label: 'Week', enabled: true, enabledOnCalendar: true }
 			];
 
 			const result = await drawNavigationHeader(doc, page, {
@@ -68,9 +68,9 @@ describe('Navigation Header', () => {
 			const page = doc.addPage([612, 792]);
 
 			const links: NavigationLink[] = [
-				{ id: 'index', label: 'Index', enabled: true },
-				{ id: 'nonexistent', label: 'Missing', enabled: true },
-				{ id: 'weekly', label: 'Week', enabled: true }
+				{ id: 'index', label: 'Index', enabled: true, enabledOnCalendar: true },
+				{ id: 'nonexistent', label: 'Missing', enabled: true, enabledOnCalendar: true },
+				{ id: 'weekly', label: 'Week', enabled: true, enabledOnCalendar: true }
 			];
 
 			const result = await drawNavigationHeader(doc, page, {
@@ -89,7 +89,7 @@ describe('Navigation Header', () => {
 			const page = doc.addPage([612, 792]);
 
 			const links: NavigationLink[] = [
-				{ id: 'index', label: 'Index', enabled: true }
+				{ id: 'index', label: 'Index', enabled: true, enabledOnCalendar: true }
 			];
 
 			const result = await drawNavigationHeader(doc, page, {
@@ -111,7 +111,7 @@ describe('Navigation Header', () => {
 			const page = doc.addPage([612, 792]);
 
 			const links: NavigationLink[] = [
-				{ id: 'index', label: 'Index', enabled: true }
+				{ id: 'index', label: 'Index', enabled: true, enabledOnCalendar: true }
 			];
 
 			const result = await drawNavigationHeader(doc, page, {
@@ -134,7 +134,7 @@ describe('Navigation Header', () => {
 			const page = doc.addPage([612, 792]);
 
 			const links: NavigationLink[] = [
-				{ id: 'index', label: 'X', enabled: true } // Very short label
+				{ id: 'index', label: 'X', enabled: true, enabledOnCalendar: true } // Very short label
 			];
 
 			const result = await drawNavigationHeader(doc, page, {
@@ -155,7 +155,7 @@ describe('Navigation Header', () => {
 			const page = doc.addPage([612, 792]);
 
 			const links: NavigationLink[] = [
-				{ id: 'index', label: 'Index', enabled: true }
+				{ id: 'index', label: 'Index', enabled: true, enabledOnCalendar: true }
 			];
 
 			const result = await drawNavigationHeader(doc, page, {
@@ -174,7 +174,7 @@ describe('Navigation Header', () => {
 			const page = doc.addPage([612, 792]);
 
 			const links: NavigationLink[] = [
-				{ id: 'index', label: 'Index', enabled: true }
+				{ id: 'index', label: 'Index', enabled: true, enabledOnCalendar: true }
 			];
 
 			const result = await drawNavigationHeader(doc, page, {

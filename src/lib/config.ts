@@ -1,10 +1,19 @@
 import type { DevicePreset } from './devices';
 
+export type CollectionNavPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
 export interface Collection {
 	id: string;
 	name: string;
 	pages: number;
-	template: 'blank' | 'dotgrid' | 'lined' | 'checklist' | 'grid';
+	template: 'blank' | 'dotgrid' | 'lined' | 'checklist' | 'grid' | 'pdf';
+	// PDF template fields (only used when template === 'pdf')
+	pdfData?: string; // Base64-encoded PDF data
+	pdfFilename?: string; // Original filename for display
+	pdfPageCount?: number; // Number of pages in original PDF
+	pdfCopies?: number; // How many copies of the PDF to include (default: 1)
+	pdfNavLinks?: string[]; // Nav link IDs to overlay, e.g. ['index', 'collections']
+	pdfNavPosition?: CollectionNavPosition; // Where to overlay nav links
 }
 
 export interface Habit {
