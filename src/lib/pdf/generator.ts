@@ -397,7 +397,7 @@ function drawHeader(
 	const y = pageHeight - margins.top;
 	const navFontSize = 9;
 	const linkHeight = 20; // Touch-friendly height
-	const navGap = 3;
+	const navGap = 1;
 	const showNav = options?.showNav !== false;
 
 	// Calculate nav width first to reserve space
@@ -405,7 +405,7 @@ function drawHeader(
 	let totalNavWidth = 0;
 	for (const link of enabledLinks) {
 		const icon = NAV_ICONS[link.id] || link.label.substring(0, 3);
-		const linkWidth = Math.max(font.widthOfTextAtSize(icon, navFontSize) + 8, 30);
+		const linkWidth = Math.max(font.widthOfTextAtSize(icon, navFontSize) + 4, 22);
 		totalNavWidth += linkWidth + navGap;
 	}
 
@@ -435,12 +435,12 @@ function drawHeader(
 		for (let i = enabledLinks.length - 1; i >= 0; i--) {
 			const link = enabledLinks[i];
 			const icon = NAV_ICONS[link.id] || link.label.substring(0, 3);
-			const linkWidth = Math.max(font.widthOfTextAtSize(icon, navFontSize) + 8, 30);
+			const linkWidth = Math.max(font.widthOfTextAtSize(icon, navFontSize) + 4, 22);
 			navX -= linkWidth;
 
 			// Draw icon text
 			page.drawText(icon, {
-				x: navX + 4,
+				x: navX + 2,
 				y: y + 2,
 				size: navFontSize,
 				font,
@@ -1006,10 +1006,8 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 	}
 	drawHeader(timelinePage, ctx, monthName, headerLinks, { linkOverrides: { habits: habitAnchor } });
 
-	// Optional background pattern on timeline
-	if (config.monthlyTimelineBackground) {
-		drawDotGrid(timelinePage, ctx);
-	}
+	// Apply page background pattern (dots/grid/lines) to timeline
+	drawDotGrid(timelinePage, ctx);
 
 	const { font, margins, pageHeight } = ctx;
 	const daysInMonth = monthDate.daysInMonth();

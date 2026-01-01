@@ -104,7 +104,7 @@
 	function addCollection() {
 		config.collections = [...config.collections, {
 			id: crypto.randomUUID(),
-			name: 'New Collection',
+			name: '',
 			pages: 5,
 			template: 'dotgrid'
 		}];
@@ -392,10 +392,6 @@
 						Monthly Pages (Timeline + Action Plan)
 					</label>
 					{#if config.enableMonthlyPages}
-						<label class="checkbox-label" style="margin-left: 1.5rem;">
-							<input type="checkbox" bind:checked={config.monthlyTimelineBackground} />
-							Show Page Background on Timeline
-						</label>
 						<label class="checkbox-label" style="margin-left: 1.5rem;">
 							<input type="checkbox" bind:checked={config.monthlyReflectionEnabled} />
 							Include Monthly Reflection Pages

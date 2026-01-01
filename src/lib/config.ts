@@ -69,7 +69,6 @@ export interface RapidInkConfig {
 	enableGoals: boolean;
 	enableFutureLog: boolean;
 	enableMonthlyPages: boolean;
-	monthlyTimelineBackground: boolean; // Show dot grid on timeline page
 	enableWeeklyPages: boolean;
 	enableDailyPages: boolean;
 	enableHabitTracker: boolean;
@@ -155,7 +154,6 @@ export const DEFAULT_CONFIG: RapidInkConfig = {
 	enableGoals: true,
 	enableFutureLog: true,
 	enableMonthlyPages: true,
-	monthlyTimelineBackground: false,
 	enableWeeklyPages: true,
 	enableDailyPages: true,
 	enableHabitTracker: true,
