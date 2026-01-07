@@ -798,7 +798,7 @@
 					</div>
 
 					<div class="form-group">
-						<label class="form-label" for="line-opacity">Line/Dot Opacity</label>
+						<label class="form-label" for="line-opacity">Line Opacity</label>
 						<input id="line-opacity" type="range" bind:value={config.lineOpacity} min="0.1" max="1" step="0.1" />
 						<span class="text-muted">{Math.round(config.lineOpacity * 100)}%</span>
 					</div>

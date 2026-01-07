@@ -211,7 +211,7 @@ export const DEFAULT_CONFIG: RapidInkConfig = {
 	dotStyle: 'dots',
 	dotSpacing: 5,
 	dotSize: 1,
-	dotOpacity: 0.3,
+	dotOpacity: 0.8,
 
 	holidays: {
 		enabled: true,
