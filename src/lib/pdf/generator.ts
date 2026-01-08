@@ -1597,12 +1597,13 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 				color: mutedTextColor(ctx, 0.8)
 			});
 
-			// Add link on chevron only
+			// Add link covering end of line and chevron (larger tap target)
+			const linkWidth = indent * 2 + chevronWidth;
 			ctx.pendingLinks.push({
 				page: currentPage,
-				x: chevronX - s(ctx, 5),
-				y: y - s(ctx, 4),
-				width: chevronWidth + indent,
+				x: chevronX - indent - s(ctx, 5),
+				y: y - s(ctx, 2),
+				width: linkWidth + s(ctx, 10),
 				height: lineHeight,
 				targetAnchor: `write-in-collection-${i}`
 			});
