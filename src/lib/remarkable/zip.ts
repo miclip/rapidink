@@ -54,14 +54,17 @@ export async function loadDocumentFromZip(zipData: ArrayBuffer): Promise<Remarka
 
   // Load .rm files for each page
   const pages = new Map<string, RmFile>();
+  const rawPages = new Map<string, Uint8Array>();
   for (const pageUuid of content.pages) {
     const rmFile = zip.file(prefix + pageUuid + '.rm') || zip.file(pageUuid + '.rm');
     if (rmFile) {
       try {
         const rmData = await rmFile.async('uint8array');
+        rawPages.set(pageUuid, rmData);  // Store raw bytes
         const parsed = parseRmFile(rmData);
         pages.set(pageUuid, parsed);
       } catch (e) {
+        // Still store raw bytes even if parsing fails
         console.warn(`Failed to parse .rm file for page ${pageUuid}:`, e);
       }
     }
@@ -79,12 +82,14 @@ export async function loadDocumentFromZip(zipData: ArrayBuffer): Promise<Remarka
     metadata,
     content,
     pages,
+    rawPages,
     originalPdf,
   };
 }
 
 /**
  * Create a ZIP file from a reMarkable document
+ * Uses flat structure matching reMarkable's xochitl folder layout
  */
 export async function createDocumentZip(
   uuid: string,
@@ -95,22 +100,22 @@ export async function createDocumentZip(
 ): Promise<Blob> {
   const zip = new JSZip();
 
-  // Create the document folder
+  // Create folder for the document (contains .rm files)
   const folder = zip.folder(uuid);
   if (!folder) {
     throw new Error('Failed to create folder');
   }
 
-  // Add metadata and content
+  // Add metadata and content at root level (siblings to the folder)
   zip.file(uuid + '.metadata', metadata);
   zip.file(uuid + '.content', content);
 
-  // Add .rm files
+  // Add .rm files inside the uuid folder
   for (const [pageUuid, rmData] of rmFiles) {
     folder.file(pageUuid + '.rm', rmData);
   }
 
-  // Add PDF if provided
+  // Add PDF at root level
   if (pdf) {
     zip.file(uuid + '.pdf', pdf);
   }

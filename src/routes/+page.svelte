@@ -619,16 +619,8 @@
 				oldAnchors = extractPageAnchors(oldPdfDoc);
 			}
 
-			// Convert .rm files to the format expected by migrateDocument
-			const oldRmFiles = new Map<string, Uint8Array>();
-			for (const [pageUuid, rmFile] of doc.pages) {
-				// Re-read the raw bytes from the ZIP for each page
-				const zip = await import('jszip').then(m => m.default.loadAsync(deviceSyncZipData!));
-				const rmFileEntry = zip.file(doc.uuid + '/' + pageUuid + '.rm') || zip.file(pageUuid + '.rm');
-				if (rmFileEntry) {
-					oldRmFiles.set(pageUuid, await rmFileEntry.async('uint8array'));
-				}
-			}
+			// Use raw .rm bytes directly from the loaded document
+			const oldRmFiles = doc.rawPages;
 
 			// Migrate the document
 			const result = migrateDocument({

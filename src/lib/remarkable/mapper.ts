@@ -62,6 +62,33 @@ export function buildPageMapping(
 }
 
 /**
+ * Build index-based page mapping when no anchors are available
+ * Maps page N to page N (1:1 mapping up to the smaller page count)
+ */
+export function buildIndexBasedMapping(
+  oldContent: DocumentContent,
+  newPageCount: number
+): PageMappingResult[] {
+  const results: PageMappingResult[] = [];
+  const maxPages = Math.min(oldContent.pageCount, newPageCount);
+
+  for (let i = 0; i < maxPages; i++) {
+    if (i < oldContent.pages.length) {
+      results.push({
+        oldPageUuid: oldContent.pages[i],
+        newPageUuid: '', // Will be filled in by mapStrokes
+        oldPageIndex: i,
+        newPageIndex: i,
+        anchor: `index-${i}`,
+        hasStrokes: false,
+      });
+    }
+  }
+
+  return results;
+}
+
+/**
  * Map strokes from old .rm files to new pages
  *
  * @param oldPages - Map of page UUID -> .rm file data
@@ -200,8 +227,16 @@ export interface MigrationOutput {
  * Perform full document migration
  */
 export function migrateDocument(input: MigrationInput): MigrationOutput {
-  // Build page mapping
-  const mapping = buildPageMapping(input.oldAnchors, input.newAnchors, input.oldContent);
+  let mapping: PageMappingResult[];
+
+  // Try anchor-based mapping first
+  if (input.oldAnchors.length > 0 && input.newAnchors.length > 0) {
+    mapping = buildPageMapping(input.oldAnchors, input.newAnchors, input.oldContent);
+  } else {
+    // Fallback to index-based mapping when no anchors exist
+    console.log('No anchors found, using index-based page mapping');
+    mapping = buildIndexBasedMapping(input.oldContent, input.newPageCount);
+  }
 
   // Map strokes to new pages
   const { newPages, newContent } = mapStrokes(

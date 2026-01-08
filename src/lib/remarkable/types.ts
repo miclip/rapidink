@@ -165,5 +165,6 @@ export interface RemarkableDocument {
   metadata: DocumentMetadata;
   content: DocumentContent;
   pages: Map<string, RmFile>;  // Page UUID -> parsed .rm file
+  rawPages: Map<string, Uint8Array>;  // Page UUID -> raw .rm bytes
   originalPdf?: Uint8Array;
 }
