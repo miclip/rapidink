@@ -282,6 +282,56 @@
 		config.collections = [...config.collections];
 	}
 
+	/**
+	 * Extract embedded RapidInk config from a PDF document
+	 */
+	async function extractConfigFromPdf(pdfDoc: typeof PDFDocument extends new (...args: unknown[]) => infer R ? R : never): Promise<RapidInkConfig | null> {
+		try {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const rawAttachments = pdfDoc.catalog.lookup(PDFName.of('Names')) as any;
+			if (!rawAttachments) return null;
+
+			const embeddedFiles = rawAttachments.lookup(PDFName.of('EmbeddedFiles'));
+			if (!embeddedFiles) return null;
+
+			const namesArray = embeddedFiles.lookup(PDFName.of('Names'));
+			if (!namesArray || !namesArray.asArray) return null;
+
+			const arr = namesArray.asArray();
+			for (let i = 0; i < arr.length; i += 2) {
+				const nameObj = arr[i];
+				let filename = '';
+				if (nameObj instanceof PDFHexString) {
+					filename = nameObj.decodeText();
+				} else if (nameObj instanceof PDFString) {
+					filename = nameObj.decodeText();
+				} else if (nameObj.toString) {
+					filename = nameObj.toString();
+				}
+
+				if (filename.includes('rapidink-config.json')) {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					let fileSpec = arr[i + 1] as any;
+					if (fileSpec instanceof PDFRef) {
+						fileSpec = pdfDoc.context.lookup(fileSpec);
+					}
+					const efDict = fileSpec.lookup(PDFName.of('EF'));
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					let stream = efDict.lookup(PDFName.of('F')) as any;
+					if (stream instanceof PDFRef) {
+						stream = pdfDoc.context.lookup(stream);
+					}
+					const decoded = decodePDFRawStream(stream);
+					const text = new TextDecoder().decode(decoded.decode());
+					return JSON.parse(text);
+				}
+			}
+		} catch (e) {
+			console.warn('Failed to extract config from PDF:', e);
+		}
+		return null;
+	}
+
 	async function handleImportConfig(event: Event) {
 		const input = event.target as HTMLInputElement;
 		if (!input.files?.length) return;
@@ -489,6 +539,32 @@
 
 			deviceSyncZipData = arrayBuffer;
 			deviceSyncInfo = info;
+
+			// Try to extract config from the embedded PDF
+			const doc = await loadDocumentFromZip(arrayBuffer);
+			if (doc.originalPdf) {
+				try {
+					const pdfDoc = await PDFDocument.load(doc.originalPdf, { ignoreEncryption: true });
+					const extractedConfig = await extractConfigFromPdf(pdfDoc);
+					if (extractedConfig) {
+						// Apply extracted config, keeping current year logic
+						const defaultYear = new Date().getMonth() >= 9 ? new Date().getFullYear() + 1 : new Date().getFullYear();
+						config = {
+							...DEFAULT_CONFIG,
+							...extractedConfig,
+							holidays: { ...DEFAULT_CONFIG.holidays, ...extractedConfig.holidays },
+							year: defaultYear
+						};
+						userMessage = {
+							type: 'success',
+							text: `Loaded configuration from "${info.visibleName}"`
+						};
+					}
+				} catch (e) {
+					console.warn('Failed to extract config from PDF:', e);
+				}
+			}
+
 			deviceSyncStep = 'review';
 		} catch (err) {
 			deviceSyncError = 'Failed to read ZIP: ' + (err as Error).message;
