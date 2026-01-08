@@ -779,7 +779,7 @@
 								</div>
 								<button class="btn-remove" on:click={() => removeCustomCode(customCode.id)}>x</button>
 							</div>
-							<div class="row">
+							<div class="row mb-1">
 								<div style="width: 100px;">
 									<select bind:value={customCode.type}>
 										<option value="task">Task (•)</option>
@@ -792,20 +792,23 @@
 										<option value="biweekly">Biweekly</option>
 									</select>
 								</div>
-								<div style="width: 80px;">
+								<div class="col">
 									<input
 										type="number"
 										bind:value={customCode.schedule.spanDays}
 										min="1"
 										max="14"
 										title="Days span"
+										placeholder="Days"
 									/>
 								</div>
+							</div>
+							<div class="row">
 								<div class="col">
 									<input
 										type="date"
 										bind:value={customCode.schedule.startDate}
-										title="Start date"
+										title="Start date (anchor for recurring pattern)"
 									/>
 								</div>
 							</div>
