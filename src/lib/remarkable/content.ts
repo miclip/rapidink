@@ -34,9 +34,29 @@ export function serializeMetadata(metadata: DocumentMetadata): string {
 
 /**
  * Parse a .content file
+ * Supports both the simple format and the newer CRDT-based format used by reMarkable devices
  */
 export function parseContent(json: string): DocumentContent {
   const data = JSON.parse(json);
+
+  // Check for CRDT-based format (newer reMarkable firmware)
+  // This format has cPages.pages[] with id fields instead of a simple pages array
+  if (data.cPages && data.cPages.pages) {
+    const pages = data.cPages.pages.map((p: { id: string }) => p.id);
+    const pageCount = data.cPages.original?.value ?? pages.length;
+
+    return {
+      fileType: data.fileType ?? 'pdf',
+      formatVersion: data.formatVersion ?? 2,
+      pageCount,
+      pages,
+      orientation: data.orientation,
+      // Preserve raw data for round-tripping
+      _raw: data,
+    };
+  }
+
+  // Simple format (older or manually created)
   return {
     coverPageNumber: data.coverPageNumber,
     documentMetadata: data.documentMetadata,

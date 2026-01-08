@@ -7,11 +7,16 @@ export class BinaryReader {
   private view: DataView;
   private offset: number = 0;
 
-  constructor(buffer: ArrayBuffer | Uint8Array) {
-    if (buffer instanceof Uint8Array) {
-      this.view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
-    } else {
+  constructor(buffer: ArrayBuffer | Uint8Array | Buffer) {
+    if (buffer instanceof ArrayBuffer) {
       this.view = new DataView(buffer);
+    } else {
+      // Handle Uint8Array and Node.js Buffer
+      // Node.js Buffer can share underlying ArrayBuffer, so we need to be careful
+      const uint8 = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+      // Create a proper ArrayBuffer copy to avoid issues with Node.js Buffer
+      const arrayBuffer = uint8.buffer.slice(uint8.byteOffset, uint8.byteOffset + uint8.byteLength);
+      this.view = new DataView(arrayBuffer);
     }
   }
 

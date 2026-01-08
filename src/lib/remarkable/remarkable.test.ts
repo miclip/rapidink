@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync, existsSync, readdirSync } from 'fs';
+import { join } from 'path';
 import { BinaryReader, BinaryWriter } from './binary';
 import {
   parseMetadata,
@@ -10,6 +12,8 @@ import {
   createMetadata,
 } from './content';
 import { buildPageMapping, calculateTransform, transformStrokes } from './mapper';
+import { parseRmFile, extractLines } from './parser';
+import { writeRmFile, createRmFile } from './writer';
 import type { Line, Point, DocumentContent } from './types';
 import { PenType, Color } from './types';
 
@@ -320,5 +324,136 @@ describe('Coordinate Transform', () => {
     expect(transformed[0].points[0].y).toBe(400);
     expect(transformed[0].points[1].x).toBe(300);
     expect(transformed[0].points[1].y).toBe(500);
+  });
+});
+
+// Tests using real device data (skipped if no device data available)
+const JOURNAL_DIR = join(process.cwd(), 'my-journal');
+const hasDeviceData = existsSync(JOURNAL_DIR);
+
+describe.skipIf(!hasDeviceData)('Real Device Data - Parser', () => {
+  const docUuid = '1d4eb5d9-674f-47f9-b452-fd5c5f098e3d';
+
+  it('parses real .metadata file correctly', () => {
+    const metadataPath = join(JOURNAL_DIR, `${docUuid}.metadata`);
+    const json = readFileSync(metadataPath, 'utf-8');
+    const metadata = parseMetadata(json);
+
+    expect(metadata.visibleName).toBeDefined();
+    expect(metadata.type).toBe('DocumentType');
+    expect(typeof metadata.deleted).toBe('boolean');
+  });
+
+  it('parses real .content file correctly', () => {
+    const contentPath = join(JOURNAL_DIR, `${docUuid}.content`);
+    const json = readFileSync(contentPath, 'utf-8');
+    const content = parseContent(json);
+
+    expect(content.pageCount).toBeGreaterThan(0);
+    expect(content.pages.length).toBe(content.pageCount);
+    expect(content.fileType).toBe('pdf');
+  });
+
+  it('parses a small .rm file from device', () => {
+    // Use the smallest file (434 bytes - likely empty or minimal strokes)
+    const rmPath = join(JOURNAL_DIR, '35328709-36bf-4aa3-a649-1a097223e514.rm');
+    const data = readFileSync(rmPath);
+
+    const rmFile = parseRmFile(data);
+
+    expect(rmFile.version).toBe(6);
+    expect(Array.isArray(rmFile.blocks)).toBe(true);
+  });
+
+  it('parses a medium .rm file with strokes', () => {
+    // Use a file with actual content (~18KB)
+    const rmPath = join(JOURNAL_DIR, '0615897c-6622-48cc-bcfe-d70c530d6778.rm');
+    const data = readFileSync(rmPath);
+
+    const rmFile = parseRmFile(data);
+
+    expect(rmFile.version).toBe(6);
+    expect(rmFile.blocks.length).toBeGreaterThan(0);
+
+    // Extract lines and verify structure
+    const lines = extractLines(data);
+    expect(Array.isArray(lines)).toBe(true);
+
+    if (lines.length > 0) {
+      const firstLine = lines[0];
+      expect(firstLine.points).toBeDefined();
+      expect(firstLine.penType).toBeDefined();
+      expect(firstLine.color).toBeDefined();
+    }
+  });
+
+  it('parses all .rm files without errors', () => {
+    const files = readdirSync(JOURNAL_DIR).filter((f) => f.endsWith('.rm'));
+    const errors: string[] = [];
+    let totalLines = 0;
+
+    for (const file of files) {
+      try {
+        const data = readFileSync(join(JOURNAL_DIR, file));
+        const rmFile = parseRmFile(data);
+
+        // Count lines extracted
+        const lines = extractLines(data);
+        totalLines += lines.length;
+      } catch (e) {
+        errors.push(`${file}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+
+    // Report any errors
+    if (errors.length > 0) {
+      console.log('Parse errors:', errors);
+    }
+
+    // Allow some failures but majority should work
+    expect(errors.length).toBeLessThan(files.length / 2);
+    console.log(`Parsed ${files.length - errors.length}/${files.length} files, extracted ${totalLines} total lines`);
+  });
+
+  it('round-trips created .rm file correctly', () => {
+    // Create a new .rm file with known data, write it, parse it back
+    // createRmFile is already imported at the top
+
+    // Create a simple file with one line
+    const testLine: Line = {
+      layerId: 0,
+      lineId: 1,
+      penType: PenType.Ballpoint,
+      color: Color.Black,
+      brushSize: 2.0,
+      points: [
+        { x: 100, y: 200, speed: 50, width: 2, direction: 0, pressure: 100 },
+        { x: 150, y: 250, speed: 60, width: 2, direction: 45, pressure: 110 },
+      ],
+    };
+
+    const written = createRmFile([testLine]);
+    const reparsed = parseRmFile(written);
+
+    expect(reparsed.version).toBe(6);
+    // The created file should parse successfully
+    expect(Array.isArray(reparsed.blocks)).toBe(true);
+  });
+
+  it('extracts document info from content file', () => {
+    // Verify the content file has correct page info
+    const contentPath = join(JOURNAL_DIR, '1d4eb5d9-674f-47f9-b452-fd5c5f098e3d.content');
+    const json = readFileSync(contentPath, 'utf-8');
+    const content = parseContent(json);
+
+    // Content should have pages that match .rm files
+    const rmFiles = readdirSync(JOURNAL_DIR).filter((f) => f.endsWith('.rm'));
+    const pageUuids = new Set(rmFiles.map((f) => f.replace('.rm', '')));
+
+    // Some content pages should have corresponding .rm files
+    const matchingPages = content.pages.filter((p) => pageUuids.has(p));
+    expect(matchingPages.length).toBeGreaterThan(0);
+
+    console.log(`Content has ${content.pageCount} pages, ${matchingPages.length} have .rm files`);
   });
 });

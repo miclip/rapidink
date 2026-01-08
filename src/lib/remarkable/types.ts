@@ -155,6 +155,8 @@ export interface DocumentContent {
   textAlignment?: string;
   textScale?: number;
   transform?: Record<string, unknown>;
+  // Raw data for CRDT-based format preservation
+  _raw?: Record<string, unknown>;
 }
 
 /** Complete document folder structure */
