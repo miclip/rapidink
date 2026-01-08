@@ -287,11 +287,14 @@
 									const decoded = decodePDFRawStream(stream);
 									const text = new TextDecoder().decode(decoded.decode());
 									const imported = JSON.parse(text);
-									// Store original config for comparison (deep merge nested objects)
+									// Store original config for comparison (deep clone arrays to prevent mutation)
 									importedOriginalConfig = {
 										...DEFAULT_CONFIG,
 										...imported,
-										holidays: { ...DEFAULT_CONFIG.holidays, ...imported.holidays }
+										holidays: { ...DEFAULT_CONFIG.holidays, ...imported.holidays },
+										// Deep clone arrays so edits to config don't affect the original
+										habits: (imported.habits || DEFAULT_CONFIG.habits).map((h: { id: string; name: string }) => ({ ...h })),
+										collections: (imported.collections || DEFAULT_CONFIG.collections).map((c: { id: string; name: string; pages: number; template?: string }) => ({ ...c }))
 									};
 									// Update year based on current month (next year only after September)
 									const defaultYear = new Date().getMonth() >= 9 ? new Date().getFullYear() + 1 : new Date().getFullYear();
