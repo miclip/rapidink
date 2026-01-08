@@ -236,7 +236,22 @@ export const DEFAULT_CONFIG: RapidInkConfig = {
 
 	events: [],
 
-	customCodes: [],
+	customCodes: [
+		{
+			id: 'garbage',
+			code: 'G',
+			description: 'Garbage',
+			type: 'task',
+			schedule: { frequency: 'biweekly', startDate: '2026-01-13', spanDays: 1 }
+		},
+		{
+			id: 'recycling',
+			code: 'GR',
+			description: 'Garbage + Recycling',
+			type: 'task',
+			schedule: { frequency: 'biweekly', startDate: '2026-01-06', spanDays: 1 }
+		}
+	],
 
 	weeklyReflectionEnabled: true,
 	monthlyReflectionEnabled: true,
