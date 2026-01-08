@@ -1,4 +1,5 @@
-import { PDFDocument, PDFPage, rgb, StandardFonts, PDFFont, PDFImage } from 'pdf-lib';
+import { PDFDocument, PDFPage, rgb, StandardFonts, PDFFont, PDFImage, PDFName, PDFString } from 'pdf-lib';
+import type { PageAnchor } from '../remarkable';
 import dayjs from 'dayjs';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
 import isoWeek from 'dayjs/plugin/isoWeek';
@@ -106,6 +107,28 @@ export interface GeneratorProgress {
 }
 
 export type ProgressCallback = (progress: GeneratorProgress) => void;
+
+/**
+ * Extract page anchors from a PDF document
+ * Used for mapping pages between old and new templates in Device Sync
+ */
+export function extractPageAnchors(pdf: PDFDocument): PageAnchor[] {
+	const anchors: PageAnchor[] = [];
+	const pages = pdf.getPages();
+
+	for (let i = 0; i < pages.length; i++) {
+		const page = pages[i];
+		const anchorValue = page.node.get(PDFName.of('RapidInkAnchor'));
+		if (anchorValue instanceof PDFString) {
+			anchors.push({
+				pageIndex: i,
+				anchor: anchorValue.decodeText(),
+			});
+		}
+	}
+
+	return anchors;
+}
 
 export async function generatePDF(
 	config: RapidInkConfig,
