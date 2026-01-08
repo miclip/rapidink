@@ -99,11 +99,9 @@
 				progress = { phase: 'attach', current: 95, total: 100, message: 'Attaching handwriting...' };
 
 				const newPdf = await PDFDocument.load(pdfBytes);
-				console.log(`Attach: orig=${importedPageCount}, new=${newPdf.getPageCount()}, same=${importedPageCount === newPdf.getPageCount()}`);
 				const attachResult = await attachHandwriting(newPdf, importedHandwriting, {
 					originalPageCount: importedPageCount ?? undefined
 				});
-				console.log(`Result: matched=${attachResult.matched}, attached=${attachResult.attached}, unmatched=${attachResult.unmatched.length}`);
 				finalPdfBytes = await newPdf.save();
 
 				if (attachResult.attached > 0) {
