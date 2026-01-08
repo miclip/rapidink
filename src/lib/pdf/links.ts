@@ -1,4 +1,4 @@
-import { PDFDocument, PDFPage, PDFRef, PDFName, PDFArray, PDFDict, PDFNumber } from 'pdf-lib';
+import { PDFDocument, PDFPage, PDFRef, PDFName, PDFArray, PDFDict, PDFNumber, PDFString } from 'pdf-lib';
 
 /**
  * Registry to track page references by anchor name.
@@ -9,12 +9,15 @@ export class PageRegistry {
 
 	/**
 	 * Register a page with an anchor name for later reference.
+	 * Also stores the anchor as page metadata for template upgrades.
 	 * @param anchor - Unique identifier for this page (e.g., 'daily-2025-01-15')
 	 * @param page - The PDFPage object
 	 * @param index - The page index in the document (0-based)
 	 */
 	registerPage(anchor: string, page: PDFPage, index: number): void {
 		this.pages.set(anchor, { page, index });
+		// Store anchor as custom page metadata for template upgrades
+		page.node.set(PDFName.of('RapidInkAnchor'), PDFString.of(anchor));
 	}
 
 	/**

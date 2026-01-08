@@ -1565,11 +1565,10 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 		y -= lineHeight;
 	}
 
-	// Write-in slots with chevron links
+	// Write-in slots - the line itself is the link
 	if (config.writeInCollectionSlots > 0) {
-		const chevron = '>';
-		const chevronWidth = font.widthOfTextAtSize(chevron, collectionFontSize);
-		const chevronX = pageWidth - margins.right - chevronWidth;
+		const lineStartX = margins.left + indent;
+		const lineEndX = pageWidth - margins.right;
 		let currentPage = page;
 
 		for (let i = 0; i < config.writeInCollectionSlots; i++) {
@@ -1582,27 +1581,18 @@ function addCollectionIndexPages(ctx: GeneratorContext) {
 
 			// Line for writing collection name
 			currentPage.drawLine({
-				start: { x: margins.left + indent, y },
-				end: { x: chevronX - indent, y },
+				start: { x: lineStartX, y },
+				end: { x: lineEndX, y },
 				thickness: s(ctx, 0.5),
 				color: lineColor(ctx)
 			});
 
-			// Chevron link
-			currentPage.drawText(chevron, {
-				x: chevronX,
-				y,
-				size: collectionFontSize,
-				font,
-				color: mutedTextColor(ctx, 0.8)
-			});
-
-			// Add link on chevron only
+			// Make the entire line area clickable (where user writes collection name)
 			ctx.pendingLinks.push({
 				page: currentPage,
-				x: chevronX - s(ctx, 5),
-				y: y - s(ctx, 4),
-				width: chevronWidth + indent,
+				x: lineStartX,
+				y: y - s(ctx, 2),
+				width: lineEndX - lineStartX,
 				height: lineHeight,
 				targetAnchor: `write-in-collection-${i}`
 			});
