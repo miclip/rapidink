@@ -168,6 +168,29 @@
 		config.customCodes = (config.customCodes || []).filter(c => c.id !== id);
 	}
 
+	// Drag and drop for custom codes
+	let draggedCodeIndex: number | null = null;
+
+	function handleCodeDragStart(index: number) {
+		draggedCodeIndex = index;
+	}
+
+	function handleCodeDragOver(e: DragEvent, index: number) {
+		e.preventDefault();
+		if (draggedCodeIndex === null || draggedCodeIndex === index) return;
+
+		const codes = [...(config.customCodes || [])];
+		const draggedItem = codes[draggedCodeIndex];
+		codes.splice(draggedCodeIndex, 1);
+		codes.splice(index, 0, draggedItem);
+		config.customCodes = codes;
+		draggedCodeIndex = index;
+	}
+
+	function handleCodeDragEnd() {
+		draggedCodeIndex = null;
+	}
+
 	function addCollection() {
 		config.collections = [...config.collections, {
 			id: crypto.randomUUID(),
@@ -756,10 +779,18 @@
 					<span>{openSections.customCodes ? '-' : '+'}</span>
 				</button>
 				<div class="accordion-content" class:open={openSections.customCodes}>
-					<p class="text-muted mb-2">Recurring events/tasks shown on timeline, weekly, and daily pages:</p>
+					<p class="text-muted mb-2">Recurring events/tasks shown on timeline, weekly, and daily pages (drag to reorder):</p>
 
-					{#each config.customCodes || [] as customCode}
-						<div class="card mb-2" style="padding: 12px;">
+					{#each config.customCodes || [] as customCode, i}
+						<div
+							class="card mb-2"
+							style="padding: 12px; cursor: grab;"
+							draggable="true"
+							on:dragstart={() => handleCodeDragStart(i)}
+							on:dragover={(e) => handleCodeDragOver(e, i)}
+							on:dragend={handleCodeDragEnd}
+							class:dragging={draggedCodeIndex === i}
+						>
 							<div class="row mb-1">
 								<div style="width: 60px;">
 									<input
@@ -1135,6 +1166,11 @@
 	.config-panel {
 		max-height: calc(100vh - 120px);
 		overflow-y: auto;
+	}
+
+	.dragging {
+		opacity: 0.5;
+		border: 2px dashed var(--color-border);
 	}
 
 	.accordion-header {
