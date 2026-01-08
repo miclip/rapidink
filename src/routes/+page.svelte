@@ -1369,7 +1369,7 @@ ssh root@10.11.99.1 systemctl restart xochitl</code></pre>
 					<input type="file" accept=".json,.pdf" on:change={handleImportConfig} style="display:none" />
 				</label>
 			</div>
-			<p class="form-hint mt-1">RapidInk PDFs have your settings embedded. Import one to restore your config. RapidInk can also preserve your e-ink device handwriting on the new PDF, enabling you to change visual elements without starting over.</p>
+			<p class="form-hint mt-1">RapidInk PDFs have your settings embedded. Import one to restore your config and re-export handwriting marks to the new PDF. For reMarkable users who want to preserve native handwriting (selection, erasing), use the Notes Preservation feature instead.</p>
 
 			{#if importedFilename}
 				<div class="imported-template-info mt-1">
