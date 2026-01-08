@@ -167,6 +167,22 @@ export function compareConfigs(original: RapidInkConfig, updated: RapidInkConfig
 		}
 	}
 
+	// Custom codes changes (safe - just text on pages)
+	const originalCodes = (original.customCodes || []).map(c => c.code).filter(c => c);
+	const updatedCodes = (updated.customCodes || []).map(c => c.code).filter(c => c);
+	const codesChanged = JSON.stringify(originalCodes) !== JSON.stringify(updatedCodes);
+	if (codesChanged) {
+		const added = updatedCodes.filter(c => !originalCodes.includes(c));
+		const removed = originalCodes.filter(c => !updatedCodes.includes(c));
+		if (added.length > 0 && removed.length > 0) {
+			safeChanges.push(`Custom codes changed: -${removed.length}, +${added.length}`);
+		} else if (added.length > 0) {
+			safeChanges.push(`Custom codes added: ${added.join(', ')}`);
+		} else if (removed.length > 0) {
+			safeChanges.push(`Custom codes removed: ${removed.join(', ')}`);
+		}
+	}
+
 	// === SAFE CHANGES - visual only, don't affect page structure ===
 
 	// Date/locale formatting

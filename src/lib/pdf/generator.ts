@@ -3,7 +3,8 @@ import dayjs from 'dayjs';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
 import isoWeek from 'dayjs/plugin/isoWeek';
 import dayOfYear from 'dayjs/plugin/dayOfYear';
-import type { RapidInkConfig, Collection } from '../config';
+import type { RapidInkConfig, Collection, CustomCode } from '../config';
+import { getActiveCodesForDate, getActiveCodesForWeek, getDayLetter } from '../customCodes';
 import { DEVICES, pxToPoints, getContentWidth } from '../devices';
 import { PageRegistry, createInternalLink } from './links';
 import { getHolidaysForYear, type Holiday } from '../holidays';
@@ -1168,26 +1169,59 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 		}
 
 		// Day of week letter
+		const dayLetterX = margins.left + s(ctx, 28);
 		timelinePage.drawText(dayOfWeek, {
-			x: margins.left + s(ctx, 28),
+			x: dayLetterX,
 			y,
 			size: dayFontSize,
 			font,
 			color: isWeekend ? mutedTextColor(ctx, 0.85) : textColor(ctx)
 		});
 
-		// Show holiday name if present
+		// Track X position for inline elements after day letter
+		let inlineX = dayLetterX + s(ctx, 14);
+		const inlineFontSize = s(ctx, 8);
+
+		// Show active custom codes for this day (right after day letter)
+		const activeCodes = getActiveCodesForDate(config.customCodes || [], date);
+		if (activeCodes.length > 0) {
+			const codesText = activeCodes.map((c) => c.code).join(' ');
+			timelinePage.drawText(codesText, {
+				x: inlineX,
+				y,
+				size: inlineFontSize,
+				font,
+				color: mutedTextColor(ctx, 0.7)
+			});
+			inlineX += font.widthOfTextAtSize(codesText, inlineFontSize) + s(ctx, 6);
+		}
+
+		// Show holiday name if present (after codes)
 		if (holiday) {
 			timelinePage.drawText(holiday.name, {
-				x: margins.left + s(ctx, 42),
+				x: inlineX,
 				y,
-				size: s(ctx, 8),
+				size: inlineFontSize,
 				font,
 				color: mutedTextColor(ctx, 0.8)
 			});
 		}
 
 		y -= lineHeight;
+	}
+
+	// Render custom codes key at bottom if any codes exist
+	if (config.customCodes && config.customCodes.length > 0) {
+		const keyFontSize = s(ctx, 7);
+		const keyY = margins.bottom + s(ctx, 25); // Above nav links
+		const keyText = config.customCodes.map((c) => `${c.code}=${c.description}`).join('  |  ');
+		timelinePage.drawText(keyText, {
+			x: margins.left,
+			y: keyY,
+			size: keyFontSize,
+			font,
+			color: mutedTextColor(ctx, 0.6)
+		});
 	}
 
 	// Action plan page
@@ -1356,6 +1390,75 @@ function addWeeklyPages(ctx: GeneratorContext, weekNumber: number) {
 	// Draw week number and day links
 	drawWeekDayLinks(actionPage, ctx, weekNumber, weekStart, subheadingY);
 
+	// Draw custom codes for this week in rapid log format
+	const activeCodesForWeek = getActiveCodesForWeek(config.customCodes || [], weekStart);
+	if (activeCodesForWeek.length > 0) {
+		const codeFontSize = s(ctx, 9);
+		const codeLineHeight = s(ctx, 12);
+		let codeY = subheadingY - s(ctx, 18); // Below the week header
+
+		for (const { code, activeDays } of activeCodesForWeek) {
+			const bullet = code.type === 'task' ? '•' : 'o';
+			// Format days like "10 F, 11 S, 12 S" with links
+			const daysText = activeDays.map((d) => `${d.date()} ${getDayLetter(d)}`).join(', ');
+			const lineText = `${bullet} ${code.description}: `;
+
+			// Draw the bullet and description
+			actionPage.drawText(lineText, {
+				x: margins.left,
+				y: codeY,
+				size: codeFontSize,
+				font,
+				color: textColor(ctx)
+			});
+
+			// Draw the days with links
+			let xPos = margins.left + font.widthOfTextAtSize(lineText, codeFontSize);
+			for (let i = 0; i < activeDays.length; i++) {
+				const d = activeDays[i];
+				const dayText = `${d.date()} ${getDayLetter(d)}`;
+				const dayTextWidth = font.widthOfTextAtSize(dayText, codeFontSize);
+
+				actionPage.drawText(dayText, {
+					x: xPos,
+					y: codeY,
+					size: codeFontSize,
+					font,
+					color: textColor(ctx)
+				});
+
+				// Add link to daily page if enabled
+				if (config.enableDailyPages) {
+					const dateStr = d.format('YYYY-MM-DD');
+					ctx.pendingLinks.push({
+						page: actionPage,
+						x: xPos - s(ctx, 2),
+						y: codeY - s(ctx, 3),
+						width: dayTextWidth + s(ctx, 4),
+						height: codeLineHeight,
+						targetAnchor: `day-${dateStr}`
+					});
+				}
+
+				xPos += dayTextWidth;
+
+				// Add comma separator (except after last day)
+				if (i < activeDays.length - 1) {
+					actionPage.drawText(', ', {
+						x: xPos,
+						y: codeY,
+						size: codeFontSize,
+						font,
+						color: mutedTextColor(ctx, 0.8)
+					});
+					xPos += font.widthOfTextAtSize(', ', codeFontSize);
+				}
+			}
+
+			codeY -= codeLineHeight;
+		}
+	}
+
 	drawDotGrid(actionPage, ctx);
 
 	// Reflection page
@@ -1490,6 +1593,20 @@ function addDailyPage(ctx: GeneratorContext, date: dayjs.Dayjs) {
 
 	for (const event of dayEvents.slice(0, 3)) {
 		page.drawText(`o ${event.title}`, {
+			x: margins.left + eventIndent,
+			y: eventY,
+			size: eventFontSize,
+			font,
+			color: textColor(ctx)
+		});
+		eventY -= eventLineHeight;
+	}
+
+	// Show active custom codes for this day
+	const activeCodes = getActiveCodesForDate(config.customCodes || [], date);
+	for (const code of activeCodes) {
+		const bullet = code.type === 'task' ? '•' : 'o';
+		page.drawText(`${bullet} ${code.description}`, {
 			x: margins.left + eventIndent,
 			y: eventY,
 			size: eventFontSize,
