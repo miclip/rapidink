@@ -1059,12 +1059,6 @@
 						Note: You need SSH access to your reMarkable. Search "reMarkable SSH" for setup instructions.
 						Tools like <a href="https://github.com/bordaigorl/remy" target="_blank" rel="noopener">ReMy</a> provide a GUI alternative.
 					</p>
-
-					<p class="text-muted" style="font-size: 0.9em; margin-top: 12px;">
-						Interactive upload coming soon. The library is ready - see
-						<a href="https://github.com/miclip/rapidink/tree/main/src/lib/remarkable" target="_blank" rel="noopener">src/lib/remarkable</a>
-						for programmatic access.
-					</p>
 				</div>
 			</div>
 		</div>
