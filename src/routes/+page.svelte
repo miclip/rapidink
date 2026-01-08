@@ -38,7 +38,8 @@
 		habits: false,
 		customCodes: false,
 		collections: false,
-		visual: false
+		visual: false,
+		deviceSync: false
 	};
 
 	// Navigation link groups
@@ -1025,6 +1026,45 @@
 						<input id="line-opacity" type="range" bind:value={config.lineOpacity} min="0.1" max="1" step="0.1" />
 						<span class="text-muted">{Math.round(config.lineOpacity * 100)}%</span>
 					</div>
+				</div>
+			</div>
+
+			<!-- Device Sync (Advanced) -->
+			<div class="accordion-item">
+				<button class="accordion-header" on:click={() => toggleSection('deviceSync')}>
+					<span>Device Sync (Advanced)</span>
+					<span>{openSections.deviceSync ? '-' : '+'}</span>
+				</button>
+				<div class="accordion-content" class:open={openSections.deviceSync}>
+					<p class="form-hint mb-2">
+						<strong>Preserve Editable Handwriting</strong><br>
+						When you export a PDF from your reMarkable and re-import it, handwriting becomes static and can't be selected or erased.
+						This advanced workflow preserves your handwriting as editable strokes by working with the device's native files.
+					</p>
+
+					<div class="card" style="background: var(--bg-subtle); padding: 12px; margin-bottom: 12px;">
+						<p style="margin: 0 0 8px 0; font-weight: 500;">Workflow:</p>
+						<ol style="margin: 0; padding-left: 20px; font-size: 0.9em;">
+							<li>SSH into your reMarkable and copy the document folder<br>
+								<code style="font-size: 0.85em;">scp -r root@remarkable:/home/root/.local/share/remarkable/xochitl/UUID ./</code>
+							</li>
+							<li>ZIP the folder and upload below</li>
+							<li>Generate your new template</li>
+							<li>Download the updated document folder</li>
+							<li>Upload back to your device and restart xochitl</li>
+						</ol>
+					</div>
+
+					<p class="form-hint" style="font-size: 0.85em; color: var(--text-muted);">
+						Note: You need SSH access to your reMarkable. Search "reMarkable SSH" for setup instructions.
+						Tools like <a href="https://github.com/bordaigorl/remy" target="_blank" rel="noopener">ReMy</a> provide a GUI alternative.
+					</p>
+
+					<p class="text-muted" style="font-size: 0.9em; margin-top: 12px;">
+						Interactive upload coming soon. The library is ready - see
+						<a href="https://github.com/miclip/rapidink/tree/main/src/lib/remarkable" target="_blank" rel="noopener">src/lib/remarkable</a>
+						for programmatic access.
+					</p>
 				</div>
 			</div>
 		</div>

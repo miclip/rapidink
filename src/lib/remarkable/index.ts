@@ -59,3 +59,13 @@ export {
   transformStrokes,
   migrateDocument,
 } from './mapper';
+
+// ZIP handling
+export type { DocumentZipInfo } from './zip';
+
+export {
+  loadDocumentFromZip,
+  createDocumentZip,
+  isRemarkableDocumentZip,
+  getDocumentZipInfo,
+} from './zip';
