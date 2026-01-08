@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { base } from '$app/paths';
+	import dayjs from 'dayjs';
 	import { PDFDocument, PDFName, PDFHexString, PDFString, PDFRef, decodePDFRawStream } from 'pdf-lib';
 	import { DEVICES, getDevicesByCategory } from '$lib/devices';
 	import { DEFAULT_CONFIG, type RapidInkConfig, type Habit, type Collection, type NavigationLink } from '$lib/config';
@@ -35,6 +36,7 @@
 		navigation: false,
 		daily: false,
 		habits: false,
+		customCodes: false,
 		collections: false,
 		visual: false
 	};
@@ -146,6 +148,24 @@
 
 	function removeHabit(id: string) {
 		config.habits = config.habits.filter(h => h.id !== id);
+	}
+
+	function addCustomCode() {
+		config.customCodes = [...(config.customCodes || []), {
+			id: crypto.randomUUID(),
+			code: '',
+			description: '',
+			type: 'event',
+			schedule: {
+				frequency: 'weekly',
+				startDate: dayjs().format('YYYY-MM-DD'),
+				spanDays: 1
+			}
+		}];
+	}
+
+	function removeCustomCode(id: string) {
+		config.customCodes = (config.customCodes || []).filter(c => c.id !== id);
 	}
 
 	function addCollection() {
@@ -726,6 +746,73 @@
 					{/each}
 
 					<button class="btn btn-secondary mt-2" on:click={addHabit}>+ Add Habit</button>
+				</div>
+			</div>
+
+			<!-- Custom Codes -->
+			<div class="accordion-item">
+				<button class="accordion-header" on:click={() => toggleSection('customCodes')}>
+					<span>Custom Codes ({(config.customCodes || []).length})</span>
+					<span>{openSections.customCodes ? '-' : '+'}</span>
+				</button>
+				<div class="accordion-content" class:open={openSections.customCodes}>
+					<p class="text-muted mb-2">Recurring events/tasks shown on timeline, weekly, and daily pages:</p>
+
+					{#each config.customCodes || [] as customCode}
+						<div class="card mb-2" style="padding: 12px;">
+							<div class="row mb-1">
+								<div style="width: 60px;">
+									<input
+										type="text"
+										bind:value={customCode.code}
+										placeholder="Code"
+										maxlength="4"
+										style="text-align: center;"
+									/>
+								</div>
+								<div class="col">
+									<input
+										type="text"
+										bind:value={customCode.description}
+										placeholder="Description (e.g., Garbage, Hannah)"
+									/>
+								</div>
+								<button class="btn-remove" on:click={() => removeCustomCode(customCode.id)}>x</button>
+							</div>
+							<div class="row">
+								<div style="width: 100px;">
+									<select bind:value={customCode.type}>
+										<option value="task">Task (•)</option>
+										<option value="event">Event (o)</option>
+									</select>
+								</div>
+								<div style="width: 110px;">
+									<select bind:value={customCode.schedule.frequency}>
+										<option value="weekly">Weekly</option>
+										<option value="biweekly">Biweekly</option>
+									</select>
+								</div>
+								<div style="width: 80px;">
+									<input
+										type="number"
+										bind:value={customCode.schedule.spanDays}
+										min="1"
+										max="14"
+										title="Days span"
+									/>
+								</div>
+								<div class="col">
+									<input
+										type="date"
+										bind:value={customCode.schedule.startDate}
+										title="Start date"
+									/>
+								</div>
+							</div>
+						</div>
+					{/each}
+
+					<button class="btn btn-secondary mt-2" on:click={addCustomCode}>+ Add Code</button>
 				</div>
 			</div>
 

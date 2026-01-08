@@ -42,6 +42,18 @@ export interface NavigationLink {
 	enabledOnCalendar: boolean; // Enabled on calendar pages
 }
 
+export interface CustomCode {
+	id: string;
+	code: string; // Short code like "G", "H", "GR"
+	description: string; // Full description like "Garbage", "Hannah"
+	type: 'task' | 'event'; // • for task, ○ for event
+	schedule: {
+		frequency: 'weekly' | 'biweekly';
+		startDate: string; // ISO date string - anchor for pattern
+		spanDays: number; // 1 for single day, 7 for week-long span
+	};
+}
+
 export type DailyPageLayout = 'freeform' | 'timeblocked' | 'split' | 'schedule';
 export type WeekStart = 'sunday' | 'monday';
 export type DateFormat = 'short' | 'medium' | 'long' | 'numeric' | 'short-intl' | 'medium-intl' | 'long-intl';
@@ -129,6 +141,9 @@ export interface RapidInkConfig {
 
 	// Calendar events (from iCal import)
 	events: CalendarEvent[];
+
+	// Custom codes for recurring events/tasks
+	customCodes: CustomCode[];
 
 	// Reflection prompts
 	weeklyReflectionEnabled: boolean;
@@ -220,6 +235,8 @@ export const DEFAULT_CONFIG: RapidInkConfig = {
 	},
 
 	events: [],
+
+	customCodes: [],
 
 	weeklyReflectionEnabled: true,
 	monthlyReflectionEnabled: true,
