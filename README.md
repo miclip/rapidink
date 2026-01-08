@@ -7,6 +7,7 @@ Customizable bullet journal PDF generator for e-ink devices. Create personalized
 - **Device Optimized** - Presets for reMarkable Paper Pro, Supernote, Kindle Scribe, and more
 - **Flexible Layouts** - Monthly timelines, weekly spreads, daily pages with multiple layout options
 - **Habit Tracking** - Built-in monthly habit tracker with customizable habits
+- **Custom Codes** - Define recurring events/tasks (e.g., G=Garbage, H=Hannah) with weekly/biweekly schedules that auto-populate on timeline, weekly, and daily pages
 - **Collections** - Create custom collections with various templates (dot grid, lined, checklist, blank) or import PDF templates
 - **Future Log** - Plan ahead with quarterly future log pages
 - **Holiday Support** - Automatically includes holidays for your country/region
