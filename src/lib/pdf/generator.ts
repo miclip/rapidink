@@ -1169,35 +1169,41 @@ function addMonthlyPages(ctx: GeneratorContext, month: number) {
 		}
 
 		// Day of week letter
+		const dayLetterX = margins.left + s(ctx, 28);
 		timelinePage.drawText(dayOfWeek, {
-			x: margins.left + s(ctx, 28),
+			x: dayLetterX,
 			y,
 			size: dayFontSize,
 			font,
 			color: isWeekend ? mutedTextColor(ctx, 0.85) : textColor(ctx)
 		});
 
-		// Show holiday name if present
-		if (holiday) {
-			timelinePage.drawText(holiday.name, {
-				x: margins.left + s(ctx, 42),
-				y,
-				size: s(ctx, 8),
-				font,
-				color: mutedTextColor(ctx, 0.8)
-			});
-		}
+		// Track X position for inline elements after day letter
+		let inlineX = dayLetterX + s(ctx, 14);
+		const inlineFontSize = s(ctx, 8);
 
-		// Show active custom codes for this day
+		// Show active custom codes for this day (right after day letter)
 		const activeCodes = getActiveCodesForDate(config.customCodes || [], date);
 		if (activeCodes.length > 0) {
 			const codesText = activeCodes.map((c) => c.code).join(' ');
 			timelinePage.drawText(codesText, {
-				x: margins.left + s(ctx, 130),
+				x: inlineX,
 				y,
-				size: s(ctx, 8),
+				size: inlineFontSize,
 				font,
 				color: mutedTextColor(ctx, 0.7)
+			});
+			inlineX += font.widthOfTextAtSize(codesText, inlineFontSize) + s(ctx, 6);
+		}
+
+		// Show holiday name if present (after codes)
+		if (holiday) {
+			timelinePage.drawText(holiday.name, {
+				x: inlineX,
+				y,
+				size: inlineFontSize,
+				font,
+				color: mutedTextColor(ctx, 0.8)
 			});
 		}
 
