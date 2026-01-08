@@ -3,10 +3,8 @@
  * This enables preserving handwriting when regenerating templates
  */
 
-import type { RmFile, Line, RemarkableDocument, DocumentContent } from './types';
-import { parseRmFile } from './parser';
-import { writeRmFile, cloneRmFile, createRmFile } from './writer';
-import { parseContent, serializeContent, generateUuid } from './content';
+import type { Line, DocumentContent } from './types';
+import { serializeContent, generateUuid } from './content';
 
 /** Page anchor from RapidInk PDF */
 export interface PageAnchor {
@@ -94,21 +92,13 @@ export function mapStrokes(
     const oldRmData = oldPages.get(result.oldPageUuid);
     if (!oldRmData) continue;
 
-    try {
-      // Parse the old .rm file
-      const rmFile = parseRmFile(oldRmData);
+    // Copy the .rm file directly - no need to parse/rewrite since we're not transforming strokes
+    // The file has content if it's larger than just the header (44 bytes)
+    result.hasStrokes = oldRmData.length > 50;
 
-      // Check if it has any strokes
-      result.hasStrokes = rmFile.lines.length > 0;
-
-      if (result.hasStrokes) {
-        // Write back the .rm file for the new page
-        // The strokes themselves don't need modification - just the file name changes
-        const newRmData = writeRmFile(rmFile);
-        newPages.set(result.newPageUuid, newRmData);
-      }
-    } catch (e) {
-      console.warn(`Failed to process page ${result.oldPageUuid}:`, e);
+    if (result.hasStrokes) {
+      // Copy raw bytes to new page UUID
+      newPages.set(result.newPageUuid, oldRmData);
     }
   }
 
