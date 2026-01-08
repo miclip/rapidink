@@ -13,7 +13,7 @@
 		{ id: 'collections', label: 'Collections' },
 		{ id: 'visual', label: 'Visual Settings' },
 		{ id: 'template-upgrade', label: 'Template Upgrade' },
-		{ id: 'device-sync', label: 'Device Sync' },
+		{ id: 'notes-preservation', label: 'Notes Preservation' },
 	];
 
 	function scrollToSection(id: string) {
@@ -319,12 +319,12 @@
 				<li>If you remove a page type, that handwriting is lost</li>
 			</ul>
 			<p>
-				For editable handwriting preservation, see <a href="#device-sync">Device Sync</a>.
+				For editable handwriting preservation, see <a href="#notes-preservation">Notes Preservation</a>.
 			</p>
 		</section>
 
-		<section id="device-sync">
-			<h2>Device Sync (Advanced)</h2>
+		<section id="notes-preservation">
+			<h2>Notes Preservation (Advanced)</h2>
 			<p>
 				This advanced feature preserves your handwriting as <strong>editable strokes</strong>
 				by working directly with your reMarkable's native file format. Unlike template upgrade,
@@ -355,7 +355,7 @@
 			<pre><code>ssh root@10.11.99.1  # Connect via USB
 grep -r "Your Document Name" /home/root/.local/share/remarkable/xochitl/*.metadata</code></pre>
 
-			<h3>Device Sync Workflow</h3>
+			<h3>Notes Preservation Workflow</h3>
 			<ol>
 				<li>
 					<strong>Download from device:</strong>
@@ -365,7 +365,7 @@ grep -r "Your Document Name" /home/root/.local/share/remarkable/xochitl/*.metada
 					<strong>ZIP the folder:</strong>
 					<pre><code>zip -r my-journal.zip my-journal/</code></pre>
 				</li>
-				<li><strong>Upload to RapidInk</strong> - Use the Device Sync wizard</li>
+				<li><strong>Upload to RapidInk</strong> - Use the Notes Preservation wizard</li>
 				<li><strong>Configure your new template</strong> - Adjust year, settings, etc.</li>
 				<li><strong>Download the result ZIP</strong></li>
 				<li>

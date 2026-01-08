@@ -1174,17 +1174,17 @@
 				</div>
 			</div>
 
-			<!-- Device Sync (Advanced) -->
+			<!-- Notes Preservation (Advanced) -->
 			<div class="accordion-item">
 				<button class="accordion-header" on:click={() => toggleSection('deviceSync')}>
-					<span>Device Sync (Advanced)</span>
+					<span>Notes Preservation (Advanced)</span>
 					<span>{openSections.deviceSync ? '-' : '+'}</span>
 				</button>
 				<div class="accordion-content" class:open={openSections.deviceSync}>
 					<p class="form-hint mb-2">
 						<strong>Preserve Editable Handwriting</strong><br>
 						Unlike PDF export, this workflow preserves your handwriting as editable strokes.
-						Requires <a href="/docs#device-sync">SSH access</a> to your reMarkable.
+						Requires <a href="/docs#notes-preservation">SSH access</a> to your reMarkable.
 					</p>
 
 					<!-- Step indicators -->
@@ -1214,7 +1214,7 @@
 							<pre class="command-block"><code>scp -r root@10.11.99.1:/home/root/.local/share/remarkable/xochitl/UUID ./my-doc
 zip -r my-doc.zip my-doc/</code></pre>
 							<p style="font-size: 0.85em; color: var(--text-muted); margin: 8px 0;">
-								Replace UUID with your document's folder name. See <a href="/docs#device-sync">docs</a> to find it.
+								Replace UUID with your document's folder name. See <a href="/docs#notes-preservation">docs</a> to find it.
 							</p>
 							<label class="upload-zone">
 								<input type="file" accept=".zip" on:change={handleDeviceSyncUpload} />
