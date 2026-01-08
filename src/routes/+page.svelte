@@ -6,6 +6,7 @@
 	import { DEFAULT_CONFIG, type RapidInkConfig, type Habit, type Collection, type NavigationLink } from '$lib/config';
 	import { COUNTRIES, STATES, hasStates, getStatesForCountry } from '$lib/holidays';
 	import type { GeneratorProgress } from '$lib/pdf/generator';
+	import { extractHandwriting, attachHandwriting, compareConfigs, type HandwritingData, type ConfigDiff } from '$lib/pdf/upgrade';
 
 	let config: RapidInkConfig = { ...DEFAULT_CONFIG };
 	let generating = false;
@@ -13,6 +14,19 @@
 	let pdfUrl: string | null = null;
 	let isSampleMode = true; // Default to sample mode for review
 	let userMessage: { type: 'success' | 'warning' | 'error'; text: string } | null = null;
+
+	// Imported template state (for handwriting preservation)
+	let importedPdfBytes: Uint8Array | null = null;
+	let importedHandwriting: Map<string, HandwritingData> | null = null;
+	let importedFilename: string | null = null;
+	let importedOriginalConfig: RapidInkConfig | null = null;
+	let importedPageCount: number | null = null; // Track original page count for index fallback
+	let preserveHandwriting = true; // Toggle for whether to preserve handwriting
+
+	// Reactive: compare imported config with current config
+	// JSON.stringify forces Svelte to track all nested property changes
+	$: configString = JSON.stringify(config);
+	$: configDiff = importedOriginalConfig && configString ? compareConfigs(importedOriginalConfig, config) : null;
 
 	// Track which sections are open
 	let openSections: Record<string, boolean> = {
@@ -79,7 +93,33 @@
 				progress = p;
 			}, base);
 
-			const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' });
+			// If we have imported handwriting and preservation is enabled, attach it to the generated PDF
+			let finalPdfBytes = pdfBytes;
+			if (preserveHandwriting && importedHandwriting && importedHandwriting.size > 0) {
+				progress = { phase: 'attach', current: 95, total: 100, message: 'Attaching handwriting...' };
+
+				const newPdf = await PDFDocument.load(pdfBytes);
+				console.log(`Attach: orig=${importedPageCount}, new=${newPdf.getPageCount()}, same=${importedPageCount === newPdf.getPageCount()}`);
+				const attachResult = await attachHandwriting(newPdf, importedHandwriting, {
+					originalPageCount: importedPageCount ?? undefined
+				});
+				console.log(`Result: matched=${attachResult.matched}, attached=${attachResult.attached}, unmatched=${attachResult.unmatched.length}`);
+				finalPdfBytes = await newPdf.save();
+
+				if (attachResult.attached > 0) {
+					userMessage = {
+						type: 'success',
+						text: `Handwriting preserved! ${attachResult.attached} annotation streams attached.${attachResult.unmatched.length > 0 ? ` ${attachResult.unmatched.length} pages could not be matched.` : ''}`
+					};
+				} else if (attachResult.unmatched.length > 0) {
+					userMessage = {
+						type: 'warning',
+						text: `Could not match handwriting to any pages.${isSampleMode ? ' Try generating full year first.' : ''}`
+					};
+				}
+			}
+
+			const blob = new Blob([finalPdfBytes as BlobPart], { type: 'application/pdf' });
 			pdfUrl = URL.createObjectURL(blob);
 		} catch (err) {
 			console.error('PDF generation failed:', err);
@@ -195,11 +235,20 @@
 		if (!input.files?.length) return;
 		userMessage = null;
 
+		// Clear any previous imported template data
+		importedPdfBytes = null;
+		importedHandwriting = null;
+		importedFilename = null;
+		importedOriginalConfig = null;
+		importedPageCount = null;
+		preserveHandwriting = true;
+
 		const file = input.files[0];
 		if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
 			try {
 				const arrayBuffer = await file.arrayBuffer();
-				const pdfDoc = await PDFDocument.load(arrayBuffer);
+				const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+				let configFound = false;
 
 				// Try to find the embedded config attachment
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -238,21 +287,62 @@
 									const decoded = decodePDFRawStream(stream);
 									const text = new TextDecoder().decode(decoded.decode());
 									const imported = JSON.parse(text);
+									// Store original config for comparison (deep merge nested objects)
+									importedOriginalConfig = {
+										...DEFAULT_CONFIG,
+										...imported,
+										holidays: { ...DEFAULT_CONFIG.holidays, ...imported.holidays }
+									};
 									// Update year based on current month (next year only after September)
 									const defaultYear = new Date().getMonth() >= 9 ? new Date().getFullYear() + 1 : new Date().getFullYear();
-									config = { ...DEFAULT_CONFIG, ...imported, year: defaultYear };
-									await tick();
-									userMessage = { type: 'success', text: `Config imported! Year updated to ${config.year}` };
-									return;
+									config = {
+										...DEFAULT_CONFIG,
+										...imported,
+										holidays: { ...DEFAULT_CONFIG.holidays, ...imported.holidays },
+										year: defaultYear
+									};
+									configFound = true;
+									break;
 								}
 							}
 						}
 					}
 				}
-				userMessage = { type: 'warning', text: 'No config found in PDF. This PDF may not have been generated by RapidInk.' };
+
+				// Extract handwriting from the PDF
+				const handwriting = await extractHandwriting(pdfDoc);
+				const hasHandwriting = handwriting.size > 0;
+
+				if (hasHandwriting) {
+					// Store the PDF bytes and handwriting for later use during generation
+					importedPdfBytes = new Uint8Array(arrayBuffer);
+					importedHandwriting = handwriting;
+					importedFilename = file.name;
+					importedPageCount = pdfDoc.getPageCount(); // Store for index fallback comparison
+				}
+
+				await tick();
+
+				// Build appropriate message
+				if (configFound && hasHandwriting) {
+					userMessage = {
+						type: 'success',
+						text: `Config imported! Found handwriting on ${handwriting.size} pages. Generate to preserve your notes.`
+					};
+				} else if (configFound) {
+					userMessage = { type: 'success', text: `Config imported! Year updated to ${config.year}` };
+				} else if (hasHandwriting) {
+					userMessage = {
+						type: 'warning',
+						text: `No RapidInk config found, but detected handwriting on ${handwriting.size} pages. Handwriting will be preserved on matching pages.`
+					};
+				} else {
+					userMessage = { type: 'warning', text: 'No config or handwriting found in PDF. This PDF may not have been generated by RapidInk.' };
+				}
+
 			} catch (err) {
 				console.error('PDF import error:', err);
-				userMessage = { type: 'error', text: 'Could not extract config from PDF' };
+				userMessage = { type: 'error', text: 'Could not process PDF: ' + (err as Error).message };
 			}
 		} else if (file.type === 'application/json' || file.name.endsWith('.json')) {
 			const text = await file.text();
@@ -317,6 +407,17 @@
 
 		config.events = [...config.events, ...events];
 		alert(`Imported ${events.length} events`);
+	}
+
+	// Clear imported template data
+	function clearImportedTemplate() {
+		importedPdfBytes = null;
+		importedHandwriting = null;
+		importedFilename = null;
+		importedOriginalConfig = null;
+		importedPageCount = null;
+		preserveHandwriting = true;
+		userMessage = null;
 	}
 </script>
 
@@ -806,15 +907,68 @@
 			</div>
 		</div>
 
+		<!-- Import/Export Section -->
 		<div class="card mt-2">
 			<div class="row">
 				<button class="btn btn-secondary" on:click={handleExportConfig}>Export Config</button>
 				<label class="btn btn-secondary">
-					Import Config
+					Import Template
 					<input type="file" accept=".json,.pdf" on:change={handleImportConfig} style="display:none" />
 				</label>
 			</div>
-			<p class="form-hint mt-1">Your settings are embedded in generated RapidInk PDFs. Import a PDF or JSON to restore your configuration.</p>
+			<p class="form-hint mt-1">RapidInk PDFs have your settings embedded. Import one to restore your config. RapidInk can also preserve your e-ink device handwriting on the new PDF, enabling you to change visual elements without starting over.</p>
+
+			{#if importedFilename}
+				<div class="imported-template-info mt-1">
+					<div class="row" style="align-items: center; gap: 0.5rem;">
+						<span class="text-muted" style="flex: 1;">{importedFilename}</span>
+						<button class="btn-remove" on:click={clearImportedTemplate}>x</button>
+					</div>
+
+					{#if importedHandwriting && importedHandwriting.size > 0}
+						<label class="checkbox-label mt-1">
+							<input type="checkbox" bind:checked={preserveHandwriting} />
+							Preserve handwriting ({importedHandwriting.size} pages)
+						</label>
+					{/if}
+				</div>
+			{/if}
+
+			{#if configDiff}
+				<div class="config-diff mt-1">
+					{#if configDiff.unsafeChanges.length > 0}
+						<div class="diff-warning">
+							<strong>Layout Changes:</strong>
+							<ul>
+								{#each configDiff.unsafeChanges as change}
+									<li>{change}</li>
+								{/each}
+							</ul>
+						</div>
+					{/if}
+
+					{#if configDiff.safeChanges.length > 0}
+						<div class="diff-safe">
+							<strong>Visual Changes:</strong>
+							<ul>
+								{#each configDiff.safeChanges as change}
+									<li>{change}</li>
+								{/each}
+							</ul>
+						</div>
+					{/if}
+
+					{#if configDiff.safeChanges.length === 0 && configDiff.unsafeChanges.length === 0}
+						<p class="text-muted">No changes from original settings.</p>
+					{/if}
+
+					{#if configDiff.unsafeChanges.length > 0 && preserveHandwriting && importedHandwriting?.size}
+						<p class="form-hint mt-1" style="color: var(--warning-color);">
+							Layout changes may cause handwriting to appear on wrong pages.
+						</p>
+					{/if}
+				</div>
+			{/if}
 		</div>
 
 		<!-- Generation Buttons -->
@@ -917,5 +1071,40 @@
 
 	.dismiss-btn:hover {
 		opacity: 1;
+	}
+
+	.imported-template-info {
+		padding: 0.5rem;
+		background: var(--card-background);
+		border: 1px solid var(--border-color);
+		border-radius: 4px;
+	}
+
+	.config-diff {
+		font-size: 13px;
+	}
+
+	.config-diff ul {
+		margin: 0.25rem 0 0 1.25rem;
+		padding: 0;
+	}
+
+	.config-diff li {
+		margin: 0.125rem 0;
+	}
+
+	.diff-warning {
+		padding: 0.5rem;
+		background: rgba(255, 193, 7, 0.1);
+		border: 1px solid rgba(255, 193, 7, 0.3);
+		border-radius: 4px;
+		margin-bottom: 0.5rem;
+	}
+
+	.diff-safe {
+		padding: 0.5rem;
+		background: rgba(40, 167, 69, 0.1);
+		border: 1px solid rgba(40, 167, 69, 0.3);
+		border-radius: 4px;
 	}
 </style>
