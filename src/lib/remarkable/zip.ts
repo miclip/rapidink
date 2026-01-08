@@ -10,32 +10,34 @@ import { writeRmFile } from './writer';
 
 /**
  * Load a reMarkable document from a ZIP file
- * Expected structure: {uuid}/ containing .content, .metadata, .rm files, and optionally .pdf
+ * Supports multiple structures:
+ * - Standard: {uuid}/ folder with .rm files, sibling {uuid}.metadata/.content/.pdf
+ * - Flat: all files in one folder, {uuid}.metadata/.content/.pdf with *.rm files
  */
 export async function loadDocumentFromZip(zipData: ArrayBuffer): Promise<RemarkableDocument> {
   const zip = await JSZip.loadAsync(zipData);
 
-  // Find the document UUID (root folder)
-  const folders = new Set<string>();
+  // Find the document UUID from the .metadata filename
+  let uuid = '';
+  let metadataPath = '';
   zip.forEach((path) => {
-    const parts = path.split('/');
-    if (parts[0] && !parts[0].includes('.')) {
-      folders.add(parts[0]);
+    if (path.endsWith('.metadata')) {
+      const parts = path.split('/');
+      const filename = parts[parts.length - 1];
+      uuid = filename.replace('.metadata', '');
+      metadataPath = path;
     }
   });
 
-  if (folders.size === 0) {
-    throw new Error('No document folder found in ZIP');
-  }
-  if (folders.size > 1) {
-    throw new Error('Multiple document folders found in ZIP - please include only one document');
+  if (!uuid) {
+    throw new Error('No .metadata file found in ZIP');
   }
 
-  const uuid = Array.from(folders)[0];
-  const prefix = uuid + '/';
+  // Determine the prefix (folder containing the files)
+  const prefix = metadataPath.includes('/') ? metadataPath.substring(0, metadataPath.lastIndexOf('/') + 1) : '';
 
   // Load metadata
-  const metadataFile = zip.file(uuid + '.metadata') || zip.file(prefix + uuid + '.metadata');
+  const metadataFile = zip.file(metadataPath);
   if (!metadataFile) {
     throw new Error('No .metadata file found');
   }
@@ -151,13 +153,15 @@ export interface DocumentZipInfo {
 export async function getDocumentZipInfo(zipData: ArrayBuffer): Promise<DocumentZipInfo> {
   const zip = await JSZip.loadAsync(zipData);
 
-  // Find UUID
+  // Find UUID and metadata path
   let uuid = '';
+  let metadataPath = '';
   zip.forEach((path) => {
     if (path.endsWith('.metadata')) {
       const parts = path.split('/');
       const filename = parts[parts.length - 1];
       uuid = filename.replace('.metadata', '');
+      metadataPath = path;
     }
   });
 
@@ -165,15 +169,18 @@ export async function getDocumentZipInfo(zipData: ArrayBuffer): Promise<Document
     throw new Error('Could not determine document UUID');
   }
 
+  // Determine the prefix (folder containing the files)
+  const prefix = metadataPath.includes('/') ? metadataPath.substring(0, metadataPath.lastIndexOf('/') + 1) : '';
+
   // Load metadata
-  const metadataFile = zip.file(uuid + '.metadata') || zip.file(uuid + '/' + uuid + '.metadata');
+  const metadataFile = zip.file(metadataPath);
   if (!metadataFile) {
     throw new Error('No .metadata file found');
   }
   const metadata = parseMetadata(await metadataFile.async('string'));
 
   // Load content
-  const contentFile = zip.file(uuid + '.content') || zip.file(uuid + '/' + uuid + '.content');
+  const contentFile = zip.file(prefix + uuid + '.content') || zip.file(uuid + '.content');
   if (!contentFile) {
     throw new Error('No .content file found');
   }
@@ -182,12 +189,12 @@ export async function getDocumentZipInfo(zipData: ArrayBuffer): Promise<Document
   // Count .rm files
   let pagesWithRmFiles = 0;
   for (const pageUuid of content.pages) {
-    const rmFile = zip.file(uuid + '/' + pageUuid + '.rm') || zip.file(pageUuid + '.rm');
+    const rmFile = zip.file(prefix + pageUuid + '.rm') || zip.file(pageUuid + '.rm');
     if (rmFile) pagesWithRmFiles++;
   }
 
   // Check for PDF
-  const hasPdf = zip.file(uuid + '.pdf') !== null || zip.file(uuid + '/' + uuid + '.pdf') !== null;
+  const hasPdf = zip.file(prefix + uuid + '.pdf') !== null || zip.file(uuid + '.pdf') !== null;
 
   return {
     uuid,
