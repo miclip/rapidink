@@ -337,6 +337,7 @@
 					<li>reMarkable with Developer Mode enabled (requires factory reset)</li>
 					<li>SSH access to your device</li>
 					<li>Basic command line familiarity</li>
+					<li><code>sshpass</code> installed (<code>sudo apt install sshpass</code>)</li>
 				</ul>
 			</div>
 
@@ -363,21 +364,38 @@ grep -r "Your Document Name" /home/root/.local/share/remarkable/xochitl/*.metada
 				</li>
 				<li>
 					<strong>ZIP the folder:</strong>
-					<pre><code>zip -r my-journal.zip my-journal/</code></pre>
+					<pre><code>cd my-journal && zip -r ../my-journal.zip . && cd ..</code></pre>
+					<p><em>Important: ZIP from inside the folder so files are at the root of the archive.</em></p>
 				</li>
 				<li><strong>Upload to RapidInk</strong> - Use the Notes Preservation wizard</li>
 				<li><strong>Configure your new template</strong> - Adjust year, settings, etc.</li>
 				<li><strong>Download the result ZIP</strong></li>
 				<li>
-					<strong>Upload to device:</strong>
-					<pre><code>unzip result.zip
-scp -r NEW-UUID root@10.11.99.1:/home/root/.local/share/remarkable/xochitl/</code></pre>
-				</li>
-				<li>
-					<strong>Restart the UI:</strong>
-					<pre><code>ssh root@10.11.99.1 systemctl restart xochitl</code></pre>
+					<strong>Upload to device using the script:</strong>
+					<pre><code>export REMARKABLE_PASSWORD='your-ssh-password'
+./scripts/upload-to-remarkable.sh ~/Downloads/remarkable-document.zip</code></pre>
+					<p>The script extracts the ZIP directly to the device and restarts the UI automatically.</p>
 				</li>
 			</ol>
+
+			<h3>How Page Mapping Works</h3>
+			<p>
+				RapidInk maps handwriting from old pages to new pages using <strong>anchors</strong> -
+				unique identifiers embedded in each page (e.g., <code>day-2026-01-15</code>, <code>week-3-action</code>).
+			</p>
+			<ul>
+				<li>Pages with matching anchors have their strokes transferred</li>
+				<li>If you change the year from 2025 to 2026, Jan 15 strokes move to the new Jan 15 page</li>
+				<li>Notes pages, collections, and other sections are also mapped by anchor</li>
+				<li>Pages added manually on the device (not in the original template) cannot be migrated</li>
+			</ul>
+
+			<h3>Limitations</h3>
+			<ul>
+				<li>Pages added on the device itself cannot be migrated (no anchor exists)</li>
+				<li>If you remove a page type (e.g., disable weekly pages), that handwriting is lost</li>
+				<li>The upload script requires <code>sshpass</code> to be installed</li>
+			</ul>
 
 			<h3>Alternative Tools</h3>
 			<p>

@@ -57,6 +57,8 @@ export async function loadDocumentFromZip(zipData: ArrayBuffer): Promise<Remarka
   // Flat structure: .rm files are siblings to metadata
   const pages = new Map<string, RmFile>();
   const rawPages = new Map<string, Uint8Array>();
+  console.log(`[ZIP] Loading .rm files for ${content.pages.length} pages, uuid=${uuid}, prefix="${prefix}"`);
+  let foundCount = 0;
   for (const pageUuid of content.pages) {
     // Try multiple possible locations for .rm files
     const rmFile = zip.file(uuid + '/' + pageUuid + '.rm') ||  // Device structure: {uuid}/{pageUuid}.rm
@@ -64,17 +66,18 @@ export async function loadDocumentFromZip(zipData: ArrayBuffer): Promise<Remarka
                    zip.file(prefix + pageUuid + '.rm') ||  // Flat: {prefix}{pageUuid}.rm
                    zip.file(pageUuid + '.rm');  // Root: {pageUuid}.rm
     if (rmFile) {
+      foundCount++;
       try {
         const rmData = await rmFile.async('uint8array');
         rawPages.set(pageUuid, rmData);  // Store raw bytes
         const parsed = parseRmFile(rmData);
         pages.set(pageUuid, parsed);
-      } catch (e) {
-        // Still store raw bytes even if parsing fails
-        console.warn(`Failed to parse .rm file for page ${pageUuid}:`, e);
+      } catch {
+        // Parsing failed but raw bytes are already stored as fallback
       }
     }
   }
+  console.log(`[ZIP] Found ${foundCount} .rm files, loaded ${rawPages.size} into rawPages`);
 
   // Load original PDF if present
   let originalPdf: Uint8Array | undefined;
@@ -197,10 +200,13 @@ export async function getDocumentZipInfo(zipData: ArrayBuffer): Promise<Document
   }
   const content = parseContent(await contentFile.async('string'));
 
-  // Count .rm files
+  // Count .rm files (check multiple possible locations)
   let pagesWithRmFiles = 0;
   for (const pageUuid of content.pages) {
-    const rmFile = zip.file(prefix + pageUuid + '.rm') || zip.file(pageUuid + '.rm');
+    const rmFile = zip.file(uuid + '/' + pageUuid + '.rm') ||  // Device structure
+                   zip.file(prefix + uuid + '/' + pageUuid + '.rm') ||  // Nested
+                   zip.file(prefix + pageUuid + '.rm') ||  // Flat
+                   zip.file(pageUuid + '.rm');  // Root
     if (rmFile) pagesWithRmFiles++;
   }
 

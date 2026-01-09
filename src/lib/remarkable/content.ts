@@ -81,6 +81,16 @@ export function parseContent(json: string): DocumentContent {
 }
 
 /**
+ * Generate incrementing idx values: "ba", "bb", "bc", ..., "bz", "ca", ...
+ */
+function generateIdxValue(index: number): string {
+  // Start at "ba" (index 0), increment through alphabet
+  const firstChar = String.fromCharCode(98 + Math.floor(index / 26)); // 'b' = 98
+  const secondChar = String.fromCharCode(97 + (index % 26)); // 'a' = 97
+  return firstChar + secondChar;
+}
+
+/**
  * Serialize a .content file
  * Uses the CRDT-based format expected by newer reMarkable firmware
  */
@@ -89,43 +99,55 @@ export function serializeContent(content: DocumentContent): string {
   // The 'redir' field maps each page entry to a PDF page index - critical for rendering
   const cPages = {
     lastOpened: {
-      timestamp: "1:0",
-      value: 0
+      timestamp: "1:1",
+      value: content.pages[0] || ""
     },
     original: {
-      timestamp: "1:0",
+      timestamp: "1:1",
       value: content.pageCount
     },
     pages: content.pages.map((id, index) => ({
       id,
       idx: {
-        timestamp: "1:0",
-        value: "ba"
+        timestamp: "1:2",
+        value: generateIdxValue(index)
       },
       redir: {
-        timestamp: "1:0",
+        timestamp: "1:2",
         value: index
       },
       template: {
-        timestamp: "1:0",
-        value: ""
+        timestamp: "1:2",
+        value: "Blank"
       }
     })),
-    uuids: content.pages.map(() => ({
-      first: "",
-      second: ""
-    }))
+    uuids: []
   };
 
   const output: Record<string, unknown> = {
     cPages,
+    coverPageNumber: 0,
+    customZoomCenterX: 0,
+    customZoomCenterY: 936,
+    customZoomOrientation: "portrait",
+    customZoomPageHeight: 1872,
+    customZoomPageWidth: 1404,
+    customZoomScale: 1,
+    documentMetadata: {},
+    extraMetadata: {},
     fileType: content.fileType,
+    fontName: "",
+    formatVersion: content.formatVersion ?? 2,
+    lineHeight: -1,
+    orientation: content.orientation ?? "portrait",
+    pageCount: content.pageCount,
+    pageTags: [],
+    sizeInBytes: "0",
+    tags: [],
+    textAlignment: "justify",
+    textScale: 1,
+    zoomMode: "bestFit"
   };
-
-  if (content.formatVersion !== undefined) output.formatVersion = content.formatVersion;
-  if (content.orientation !== undefined) output.orientation = content.orientation;
-  if (content.originalPageCount !== undefined) output.originalPageCount = content.originalPageCount;
-  output.pageCount = content.pageCount;
 
   return JSON.stringify(output, null, 2);
 }

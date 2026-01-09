@@ -143,14 +143,9 @@ export function reconstructAnchorsFromConfig(config: RapidInkConfig): PageAnchor
 		anchors.push({ pageIndex: pageIndex++, anchor: 'cover' });
 	}
 
-	// Index (estimate pages based on month count)
+	// Index (single page - all 12 months fit)
 	if (config.enableIndex) {
 		anchors.push({ pageIndex: pageIndex++, anchor: 'index' });
-		// Index may span multiple pages for 12 months, add extras
-		const monthCount = config.sampleMonthCount && config.sampleMonthCount > 0 ? config.sampleMonthCount : 12;
-		if (monthCount > 6) {
-			pageIndex++; // Second index page
-		}
 	}
 
 	// Guide
@@ -234,19 +229,22 @@ export function reconstructAnchorsFromConfig(config: RapidInkConfig): PageAnchor
 				anchors.push({ pageIndex: pageIndex++, anchor });
 			}
 		}
-		// Write-in collection slots
+		// Write-in collection slots - all pages get anchors
 		const pagesPerSlot = config.writeInCollectionPages || 1;
 		for (let i = 0; i < config.writeInCollectionSlots; i++) {
-			anchors.push({ pageIndex: pageIndex++, anchor: `write-in-collection-${i}` });
-			// Additional pages per slot don't get anchors (just the first)
-			pageIndex += pagesPerSlot - 1;
+			for (let p = 0; p < pagesPerSlot; p++) {
+				const anchor = p === 0 ? `write-in-collection-${i}` : `write-in-collection-${i}-${p + 1}`;
+				anchors.push({ pageIndex: pageIndex++, anchor });
+			}
 		}
 	}
 
-	// Notes pages (only first page gets anchor)
+	// Notes pages - all pages get anchors
 	if (config.enableNotesPages && config.notesPageCount > 0) {
-		anchors.push({ pageIndex: pageIndex++, anchor: 'notes' });
-		pageIndex += config.notesPageCount - 1;
+		for (let i = 0; i < config.notesPageCount; i++) {
+			const anchor = i === 0 ? 'notes' : `notes-${i + 1}`;
+			anchors.push({ pageIndex: pageIndex++, anchor });
+		}
 	}
 
 	return anchors;
@@ -2035,8 +2033,8 @@ function addWriteInCollectionPages(ctx: GeneratorContext, slotIndex: number) {
 	const pagesPerSlot = config.writeInCollectionPages || 1;
 
 	for (let i = 0; i < pagesPerSlot; i++) {
-		// First page gets the anchor for linking
-		const anchor = i === 0 ? `write-in-collection-${slotIndex}` : undefined;
+		// All pages get anchors for Notes Preservation
+		const anchor = i === 0 ? `write-in-collection-${slotIndex}` : `write-in-collection-${slotIndex}-${i + 1}`;
 		const page = addPage(ctx, anchor);
 
 		// Generic title - user can write their own
@@ -2083,7 +2081,7 @@ function drawChecklist(page: PDFPage, ctx: GeneratorContext) {
 }
 
 function addNotesPage(ctx: GeneratorContext, pageNum: number) {
-	const anchor = pageNum === 1 ? 'notes' : undefined;
+	const anchor = pageNum === 1 ? 'notes' : `notes-${pageNum}`;
 	const page = addPage(ctx, anchor);
 	drawHeader(page, ctx, 'Notes', [{ label: 'Index', anchor: 'index' }], { navType: 'reference' });
 	drawDotGrid(page, ctx);

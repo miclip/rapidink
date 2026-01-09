@@ -115,18 +115,39 @@ export function mapStrokes(
   }
 
   // Process each mapped page
+  let foundRm = 0;
+  let withStrokes = 0;
   for (const result of mapping) {
     const oldRmData = oldPages.get(result.oldPageUuid);
     if (!oldRmData) continue;
+    foundRm++;
 
     // Copy the .rm file directly - no need to parse/rewrite since we're not transforming strokes
     // The file has content if it's larger than just the header (44 bytes)
     result.hasStrokes = oldRmData.length > 50;
 
     if (result.hasStrokes) {
+      withStrokes++;
       // Copy raw bytes to new page UUID
       newPages.set(result.newPageUuid, oldRmData);
     }
+  }
+  console.log(`[MAPSTROKES] oldPages has ${oldPages.size} entries, found ${foundRm} matching, ${withStrokes} with strokes`);
+
+  // Debug: show which pages have strokes and where they're mapped
+  const strokeMappings = mapping.filter(m => m.hasStrokes).slice(0, 10);
+  console.log(`[MAPSTROKES] Sample stroke mappings (old->new):`, strokeMappings.map(m => `${m.oldPageIndex}:${m.anchor}->${m.newPageIndex}`));
+
+  // Log any unmapped pages that had .rm files
+  if (oldPages.size > foundRm) {
+    const mappedUuids = new Set(mapping.map((m) => m.oldPageUuid));
+    const unmappedWithRm: string[] = [];
+    for (const uuid of oldPages.keys()) {
+      if (!mappedUuids.has(uuid)) {
+        unmappedWithRm.push(uuid);
+      }
+    }
+    console.log(`[MAPSTROKES] ${unmappedWithRm.length} pages with .rm files were not mapped (likely on unanchored pages)`);
   }
 
   // Create new content structure
@@ -229,13 +250,22 @@ export interface MigrationOutput {
 export function migrateDocument(input: MigrationInput): MigrationOutput {
   let mapping: PageMappingResult[];
 
+  console.log(`[MIGRATE] oldAnchors: ${input.oldAnchors.length}, newAnchors: ${input.newAnchors.length}`);
+  console.log(`[MIGRATE] oldRmFiles: ${input.oldRmFiles.size}, oldContent.pages: ${input.oldContent.pages.length}`);
+
+  // Debug: show first few anchor mappings
+  console.log(`[MIGRATE] Sample old anchors:`, input.oldAnchors.slice(0, 5).map(a => `${a.pageIndex}:${a.anchor}`));
+  console.log(`[MIGRATE] Sample new anchors:`, input.newAnchors.slice(0, 5).map(a => `${a.pageIndex}:${a.anchor}`));
+
   // Try anchor-based mapping first
   if (input.oldAnchors.length > 0 && input.newAnchors.length > 0) {
     mapping = buildPageMapping(input.oldAnchors, input.newAnchors, input.oldContent);
+    console.log(`[MIGRATE] Anchor-based mapping: ${mapping.length} pages mapped`);
   } else {
     // Fallback to index-based mapping when no anchors exist
     console.log('No anchors found, using index-based page mapping');
     mapping = buildIndexBasedMapping(input.oldContent, input.newPageCount);
+    console.log(`[MIGRATE] Index-based mapping: ${mapping.length} pages mapped`);
   }
 
   // Map strokes to new pages

@@ -625,6 +625,11 @@
 						console.log('No embedded anchors found, reconstructing from config...');
 						oldAnchors = reconstructAnchorsFromConfig(oldConfig);
 						console.log(`Reconstructed ${oldAnchors.length} anchors from embedded config`);
+					} else {
+						// Final fallback: use current config (assumes old PDF was generated with same settings)
+						console.log('No embedded config found, using current config to reconstruct anchors...');
+						oldAnchors = reconstructAnchorsFromConfig(config);
+						console.log(`Reconstructed ${oldAnchors.length} anchors from current config`);
 					}
 				}
 			}
@@ -640,12 +645,12 @@
 				newAnchors,
 				newPageCount: newPdfDoc.getPageCount(),
 				newPdf: pdfBytes,
-				visibleName: deviceSyncInfo.visibleName + ' (Updated)',
+				visibleName: deviceSyncInfo.visibleName + ' (' + new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ')',
 			});
 
-			// Create the output ZIP
+			// Create the output ZIP with a completely fresh UUID
 			const outputZip = await createDocumentZip(
-				doc.uuid.replace(/-/g, '') + Date.now().toString(16), // New UUID
+				crypto.randomUUID().replace(/-/g, ''), // Fresh UUID to avoid conflicts with old documents
 				result.metadata,
 				result.content,
 				result.rmFiles,
