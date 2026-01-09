@@ -1257,13 +1257,13 @@
 
 					<!-- Step indicators -->
 					<div class="sync-steps mb-2">
-						<span class="step" class:active={deviceSyncStep === 'upload'}>1. Upload</span>
-						<span class="step-arrow">→</span>
-						<span class="step" class:active={deviceSyncStep === 'review'}>2. Review</span>
-						<span class="step-arrow">→</span>
-						<span class="step" class:active={deviceSyncStep === 'configure'}>3. Configure</span>
-						<span class="step-arrow">→</span>
-						<span class="step" class:active={deviceSyncStep === 'complete'}>4. Download</span>
+						<span class="step" class:active={deviceSyncStep === 'upload'}>Upload</span>
+						<span class="step-arrow">&gt;</span>
+						<span class="step" class:active={deviceSyncStep === 'review'}>Review</span>
+						<span class="step-arrow">&gt;</span>
+						<span class="step" class:active={deviceSyncStep === 'configure'}>Config</span>
+						<span class="step-arrow">&gt;</span>
+						<span class="step" class:active={deviceSyncStep === 'complete'}>Download</span>
 					</div>
 
 					{#if deviceSyncError}
@@ -1586,16 +1586,16 @@ ssh root@10.11.99.1 systemctl restart xochitl</code></pre>
 	.sync-steps {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.85rem;
-		flex-wrap: wrap;
+		gap: 0.25rem;
+		font-size: 0.75rem;
 	}
 
 	.sync-steps .step {
-		padding: 0.25rem 0.5rem;
+		padding: 0.2rem 0.4rem;
 		background: var(--bg-subtle, #f5f5f5);
 		border-radius: 4px;
 		color: var(--text-muted);
+		white-space: nowrap;
 	}
 
 	.sync-steps .step.active {
