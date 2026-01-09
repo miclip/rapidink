@@ -130,6 +130,140 @@ export function extractPageAnchors(pdf: PDFDocument): PageAnchor[] {
 	return anchors;
 }
 
+/**
+ * Reconstruct page anchors from a config without generating the PDF
+ * Used as fallback for PDFs generated before anchor embedding was added
+ */
+export function reconstructAnchorsFromConfig(config: RapidInkConfig): PageAnchor[] {
+	const anchors: PageAnchor[] = [];
+	let pageIndex = 0;
+
+	// Cover
+	if (config.enableCover) {
+		anchors.push({ pageIndex: pageIndex++, anchor: 'cover' });
+	}
+
+	// Index (estimate pages based on month count)
+	if (config.enableIndex) {
+		anchors.push({ pageIndex: pageIndex++, anchor: 'index' });
+		// Index may span multiple pages for 12 months, add extras
+		const monthCount = config.sampleMonthCount && config.sampleMonthCount > 0 ? config.sampleMonthCount : 12;
+		if (monthCount > 6) {
+			pageIndex++; // Second index page
+		}
+	}
+
+	// Guide
+	if (config.enableGuide) {
+		anchors.push({ pageIndex: pageIndex++, anchor: 'guide' });
+	}
+
+	// Intention
+	if (config.enableIntention) {
+		anchors.push({ pageIndex: pageIndex++, anchor: 'intention' });
+	}
+
+	// Goals
+	if (config.enableGoals) {
+		anchors.push({ pageIndex: pageIndex++, anchor: 'goals' });
+	}
+
+	// Future Log (2 pages)
+	if (config.enableFutureLog) {
+		anchors.push({ pageIndex: pageIndex++, anchor: 'future-log' });
+		anchors.push({ pageIndex: pageIndex++, anchor: 'future-log-2' });
+	}
+
+	const monthCount = config.sampleMonthCount && config.sampleMonthCount > 0 ? config.sampleMonthCount : 12;
+
+	// Monthly pages (2 per month: timeline + action)
+	if (config.enableMonthlyPages) {
+		for (let month = 0; month < monthCount; month++) {
+			anchors.push({ pageIndex: pageIndex++, anchor: `month-${month}-timeline` });
+			anchors.push({ pageIndex: pageIndex++, anchor: `month-${month}-action` });
+		}
+	}
+
+	// Habit tracker (1 per month)
+	if (config.enableHabitTracker) {
+		for (let month = 0; month < monthCount; month++) {
+			const anchor = month === 0 ? 'habits' : `habits-${month}`;
+			anchors.push({ pageIndex: pageIndex++, anchor });
+		}
+	}
+
+	// Weekly pages
+	if (config.enableWeeklyPages) {
+		const maxMonth = monthCount - 1;
+		const startMonth = config.startMonth || 0;
+		const { month: lastActualMonth, year: lastActualYear } = getActualMonthYearStatic(maxMonth, config.year, startMonth);
+		const lastSampleDate = dayjs(`${lastActualYear}-${lastActualMonth + 1}-01`).endOf('month');
+		const lastWeekInSample = config.weekStart === 'monday' ? lastSampleDate.isoWeek() : lastSampleDate.week();
+		const weeksInYear = getWeeksInYearStatic(config.year, config.weekStart);
+		const maxWeek = monthCount < 12 ? lastWeekInSample : weeksInYear;
+
+		for (let week = 1; week <= maxWeek; week++) {
+			anchors.push({ pageIndex: pageIndex++, anchor: `week-${week}-action` });
+			if (config.weeklyReflectionEnabled) {
+				anchors.push({ pageIndex: pageIndex++, anchor: `week-${week}-reflection` });
+			}
+		}
+	}
+
+	// Daily pages
+	if (config.enableDailyPages) {
+		const maxMonth = monthCount - 1;
+		const startMonth = config.startMonth || 0;
+		const { month: lastActualMonth, year: lastActualYear } = getActualMonthYearStatic(maxMonth, config.year, startMonth);
+		const lastDate = dayjs(`${lastActualYear}-${lastActualMonth + 1}-01`).endOf('month');
+		const totalDays = lastDate.dayOfYear();
+
+		for (let day = 1; day <= totalDays; day++) {
+			const date = dayjs(`${config.year}-01-01`).dayOfYear(day);
+			const dateStr = date.format('YYYY-MM-DD');
+			anchors.push({ pageIndex: pageIndex++, anchor: `day-${dateStr}` });
+		}
+	}
+
+	// Collections
+	if (config.enableCollections) {
+		anchors.push({ pageIndex: pageIndex++, anchor: 'collections' });
+		for (const collection of config.collections) {
+			for (let i = 0; i < collection.pages; i++) {
+				const anchor = i === 0 ? `collection-${collection.id}` : `collection-${collection.id}-${i + 1}`;
+				anchors.push({ pageIndex: pageIndex++, anchor });
+			}
+		}
+		// Write-in collection slots
+		const pagesPerSlot = config.writeInCollectionPages || 1;
+		for (let i = 0; i < config.writeInCollectionSlots; i++) {
+			anchors.push({ pageIndex: pageIndex++, anchor: `write-in-collection-${i}` });
+			// Additional pages per slot don't get anchors (just the first)
+			pageIndex += pagesPerSlot - 1;
+		}
+	}
+
+	// Notes pages (only first page gets anchor)
+	if (config.enableNotesPages && config.notesPageCount > 0) {
+		anchors.push({ pageIndex: pageIndex++, anchor: 'notes' });
+		pageIndex += config.notesPageCount - 1;
+	}
+
+	return anchors;
+}
+
+// Static helper for reconstructAnchorsFromConfig (same logic as getActualMonthYear but standalone)
+function getActualMonthYearStatic(plannerMonth: number, baseYear: number, startMonth: number): { month: number; year: number } {
+	const actualMonth = (startMonth + plannerMonth) % 12;
+	const yearOffset = Math.floor((startMonth + plannerMonth) / 12);
+	return { month: actualMonth, year: baseYear + yearOffset };
+}
+
+function getWeeksInYearStatic(year: number, weekStart: 'sunday' | 'monday'): number {
+	const lastDay = dayjs(`${year}-12-31`);
+	return weekStart === 'monday' ? lastDay.isoWeek() : lastDay.week();
+}
+
 export async function generatePDF(
 	config: RapidInkConfig,
 	onProgress?: ProgressCallback,
@@ -384,6 +518,9 @@ function addPage(ctx: GeneratorContext, anchor?: string): PDFPage {
 	const page = ctx.doc.addPage([ctx.pageWidth, ctx.pageHeight]);
 	if (anchor) {
 		ctx.registry.registerPage(anchor, page, ctx.currentPageIndex);
+		// Embed anchor into page for Notes Preservation feature
+		// This allows extractPageAnchors to read it back when migrating documents
+		page.node.set(PDFName.of('RapidInkAnchor'), PDFString.of(anchor));
 	}
 	ctx.currentPageIndex++;
 	return page;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generatePDF } from './generator';
+import { generatePDF, extractPageAnchors } from './generator';
 import { DEFAULT_CONFIG } from '../config';
 import { PDFDocument, PDFName, PDFHexString, PDFString, PDFRef, decodePDFRawStream } from 'pdf-lib';
 
@@ -214,5 +214,44 @@ describe('PDF Generator', () => {
 			expect(rightPdf.length).toBeGreaterThan(0);
 			expect(leftPdf.length).toBeGreaterThan(0);
 		});
+
+		it('should embed page anchors for Notes Preservation', async () => {
+			const config = {
+				...DEFAULT_CONFIG,
+				enableCover: true,
+				enableIndex: true,
+				enableGuide: false,
+				enableIntention: false,
+				enableGoals: false,
+				enableFutureLog: false,
+				enableMonthlyPages: true,
+				enableHabitTracker: false,
+				enableWeeklyPages: false,
+				enableDailyPages: true,
+				enableCollections: false,
+				enableNotesPages: false,
+				notesPageCount: 0,
+				sampleMonthCount: 1 // Just January for faster test
+			};
+
+			const pdfBytes = await generatePDF(config);
+			const doc = await PDFDocument.load(pdfBytes);
+			const anchors = extractPageAnchors(doc);
+
+			// Should have anchors for pages with identifiable content
+			expect(anchors.length).toBeGreaterThan(0);
+
+			// Check for expected anchor types
+			const anchorStrings = anchors.map(a => a.anchor);
+
+			// Should have index anchor
+			expect(anchorStrings).toContain('index');
+
+			// Should have monthly anchors
+			expect(anchorStrings.some(a => a.startsWith('month-'))).toBe(true);
+
+			// Should have daily anchors (e.g., day-2026-01-01)
+			expect(anchorStrings.some(a => a.startsWith('day-'))).toBe(true);
+		}, 30000);
 	});
 });

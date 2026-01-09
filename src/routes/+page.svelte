@@ -602,7 +602,7 @@
 			const doc = await loadDocumentFromZip(deviceSyncZipData);
 
 			// Generate the new PDF template
-			const { generatePDF, extractPageAnchors } = await import('$lib/pdf/generator');
+			const { generatePDF, extractPageAnchors, reconstructAnchorsFromConfig } = await import('$lib/pdf/generator');
 			const pdfBytes = await generatePDF(config, (p) => {
 				progress = p;
 			});
@@ -617,6 +617,16 @@
 			if (doc.originalPdf) {
 				const oldPdfDoc = await PDFDocument.load(doc.originalPdf);
 				oldAnchors = extractPageAnchors(oldPdfDoc);
+
+				// Fallback: if no embedded anchors, try to reconstruct from embedded config
+				if (oldAnchors.length === 0) {
+					const oldConfig = await extractConfigFromPdf(oldPdfDoc);
+					if (oldConfig) {
+						console.log('No embedded anchors found, reconstructing from config...');
+						oldAnchors = reconstructAnchorsFromConfig(oldConfig);
+						console.log(`Reconstructed ${oldAnchors.length} anchors from embedded config`);
+					}
+				}
 			}
 
 			// Use raw .rm bytes directly from the loaded document
