@@ -53,10 +53,16 @@ export async function loadDocumentFromZip(zipData: ArrayBuffer): Promise<Remarka
   const content = parseContent(contentJson);
 
   // Load .rm files for each page
+  // Device structure: .rm files are in {uuid}/ folder
+  // Flat structure: .rm files are siblings to metadata
   const pages = new Map<string, RmFile>();
   const rawPages = new Map<string, Uint8Array>();
   for (const pageUuid of content.pages) {
-    const rmFile = zip.file(prefix + pageUuid + '.rm') || zip.file(pageUuid + '.rm');
+    // Try multiple possible locations for .rm files
+    const rmFile = zip.file(uuid + '/' + pageUuid + '.rm') ||  // Device structure: {uuid}/{pageUuid}.rm
+                   zip.file(prefix + uuid + '/' + pageUuid + '.rm') ||  // Nested: {prefix}{uuid}/{pageUuid}.rm
+                   zip.file(prefix + pageUuid + '.rm') ||  // Flat: {prefix}{pageUuid}.rm
+                   zip.file(pageUuid + '.rm');  // Root: {pageUuid}.rm
     if (rmFile) {
       try {
         const rmData = await rmFile.async('uint8array');
