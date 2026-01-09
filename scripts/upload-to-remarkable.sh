@@ -2,6 +2,9 @@
 # Upload a RapidInk document to reMarkable device
 # Usage: ./upload-to-remarkable.sh <zip-file> [password]
 # Or set REMARKABLE_PASSWORD environment variable
+#
+# This script stops xochitl, unpacks the ZIP directly into the xochitl folder,
+# and restarts xochitl. This preserves page UUIDs and stroke mappings.
 
 set -e
 
@@ -38,14 +41,14 @@ if ! command -v sshpass &> /dev/null; then
     exit 1
 fi
 
-# Create temp directory for extraction
+SSH_CMD="sshpass -p $PASSWORD ssh -o StrictHostKeyChecking=no root@$DEVICE_IP"
+SCP_CMD="sshpass -p $PASSWORD scp -o StrictHostKeyChecking=no"
+
+# Get document info from ZIP
 TEMP_DIR=$(mktemp -d)
 trap "rm -rf $TEMP_DIR" EXIT
 
-echo "Extracting $ZIP_FILE..."
 unzip -q "$ZIP_FILE" -d "$TEMP_DIR"
-
-# Find the document UUID from .metadata file
 META_FILE=$(find "$TEMP_DIR" -name "*.metadata" | head -1)
 if [ -z "$META_FILE" ]; then
     echo "Error: No .metadata file found in ZIP"
@@ -53,53 +56,32 @@ if [ -z "$META_FILE" ]; then
 fi
 
 DOC_UUID=$(basename "$META_FILE" .metadata)
-META_DIR=$(dirname "$META_FILE")
+DOC_NAME=$(grep -o '"visibleName"[[:space:]]*:[[:space:]]*"[^"]*"' "$META_FILE" | cut -d'"' -f4)
 
-echo "Found document: $DOC_UUID"
-echo "Files located in: $META_DIR"
+echo "Document: $DOC_NAME"
+echo "UUID: $DOC_UUID"
 
-# Count .rm files
-RM_FOLDER="$META_DIR/$DOC_UUID"
+# Count files
+RM_FOLDER="$TEMP_DIR/$DOC_UUID"
 if [ -d "$RM_FOLDER" ]; then
-    RM_COUNT=$(find "$RM_FOLDER" -name "*.rm" | wc -l)
-    echo "Found $RM_COUNT .rm files to upload"
+    RM_COUNT=$(find "$RM_FOLDER" -name "*.rm" 2>/dev/null | wc -l)
 else
-    echo "Warning: No .rm folder found at $RM_FOLDER"
     RM_COUNT=0
 fi
+echo "Stroke files: $RM_COUNT"
 
-echo "Uploading to $DEVICE_IP..."
+# Upload ZIP to device
+echo ""
+echo "Uploading ZIP to device..."
+$SCP_CMD "$ZIP_FILE" "root@$DEVICE_IP:/tmp/upload.zip"
 
-# Upload the document folder (contains .rm files)
-if [ -d "$RM_FOLDER" ] && [ "$RM_COUNT" -gt 0 ]; then
-    echo "  Uploading .rm files folder..."
-    sshpass -p "$PASSWORD" scp -r -o StrictHostKeyChecking=no \
-        "$RM_FOLDER" \
-        "root@$DEVICE_IP:$XOCHITL_PATH/"
-fi
+# Unzip directly into xochitl folder, then restart
+echo "Extracting to xochitl folder..."
+$SSH_CMD "cd $XOCHITL_PATH && unzip -o /tmp/upload.zip && rm /tmp/upload.zip"
 
-# Upload sibling files (.metadata, .content, .pdf)
-for ext in metadata content pdf; do
-    FILE="$META_DIR/$DOC_UUID.$ext"
-    if [ -f "$FILE" ]; then
-        echo "  Uploading $DOC_UUID.$ext..."
-        sshpass -p "$PASSWORD" scp -o StrictHostKeyChecking=no \
-            "$FILE" \
-            "root@$DEVICE_IP:$XOCHITL_PATH/"
-    fi
-done
-
-# Optionally restart xochitl
-if [ "$RESTART_XOCHITL" = "1" ]; then
-    echo "Restarting xochitl service..."
-    sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no \
-        "root@$DEVICE_IP" "systemctl restart xochitl"
-    echo "Your reMarkable should reload and show the new document."
-else
-    echo ""
-    echo "Document uploaded. Pull down from top of screen to refresh, or restart device."
-    echo "To auto-restart xochitl, run with: RESTART_XOCHITL=1 $0 ..."
-fi
+echo "Restarting xochitl..."
+$SSH_CMD "systemctl restart xochitl"
 
 echo ""
-echo "Done!"
+echo "Done! Document '$DOC_NAME' uploaded."
+echo "Pull down from top of screen to refresh if needed."

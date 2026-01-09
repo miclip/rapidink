@@ -51,9 +51,9 @@ export function parseRmFile(data: ArrayBuffer | Uint8Array): RmFile {
         }
         // Add more block type handlers as needed
       }
-    } catch (e) {
+    } catch {
       // Continue parsing even if individual block fails
-      console.warn('Failed to parse block:', block.header.blockType, e);
+      // v6 format has features we don't fully support - raw bytes are preserved as fallback
     }
   }
 
@@ -102,9 +102,7 @@ function readBlock(reader: BinaryReader): RawBlock | null {
   const currentVersion = reader.readUint8();
   const blockType = reader.readUint8() as BlockType;
 
-  if (unknown !== 0) {
-    console.warn(`Unexpected unknown byte: ${unknown}`);
-  }
+  // unknown byte is typically 0, but non-zero values don't affect parsing
 
   const header: BlockHeader = {
     length,
@@ -113,9 +111,8 @@ function readBlock(reader: BinaryReader): RawBlock | null {
     blockType,
   };
 
-  // Read block data
+  // Read block data - if length exceeds remaining, stop parsing
   if (length > reader.remaining) {
-    console.warn(`Block length ${length} exceeds remaining ${reader.remaining}`);
     return null;
   }
 

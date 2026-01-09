@@ -602,7 +602,7 @@
 			const doc = await loadDocumentFromZip(deviceSyncZipData);
 
 			// Generate the new PDF template
-			const { generatePDF, extractPageAnchors } = await import('$lib/pdf/generator');
+			const { generatePDF, extractPageAnchors, reconstructAnchorsFromConfig } = await import('$lib/pdf/generator');
 			const pdfBytes = await generatePDF(config, (p) => {
 				progress = p;
 			});
@@ -617,6 +617,21 @@
 			if (doc.originalPdf) {
 				const oldPdfDoc = await PDFDocument.load(doc.originalPdf);
 				oldAnchors = extractPageAnchors(oldPdfDoc);
+
+				// Fallback: if no embedded anchors, try to reconstruct from embedded config
+				if (oldAnchors.length === 0) {
+					const oldConfig = await extractConfigFromPdf(oldPdfDoc);
+					if (oldConfig) {
+						console.log('No embedded anchors found, reconstructing from config...');
+						oldAnchors = reconstructAnchorsFromConfig(oldConfig);
+						console.log(`Reconstructed ${oldAnchors.length} anchors from embedded config`);
+					} else {
+						// Final fallback: use current config (assumes old PDF was generated with same settings)
+						console.log('No embedded config found, using current config to reconstruct anchors...');
+						oldAnchors = reconstructAnchorsFromConfig(config);
+						console.log(`Reconstructed ${oldAnchors.length} anchors from current config`);
+					}
+				}
 			}
 
 			// Use raw .rm bytes directly from the loaded document
@@ -630,12 +645,12 @@
 				newAnchors,
 				newPageCount: newPdfDoc.getPageCount(),
 				newPdf: pdfBytes,
-				visibleName: deviceSyncInfo.visibleName + ' (Updated)',
+				visibleName: deviceSyncInfo.visibleName + ' (' + new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ')',
 			});
 
-			// Create the output ZIP
+			// Create the output ZIP with a completely fresh UUID
 			const outputZip = await createDocumentZip(
-				doc.uuid.replace(/-/g, '') + Date.now().toString(16), // New UUID
+				crypto.randomUUID().replace(/-/g, ''), // Fresh UUID to avoid conflicts with old documents
 				result.metadata,
 				result.content,
 				result.rmFiles,
