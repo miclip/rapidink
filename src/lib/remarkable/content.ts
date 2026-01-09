@@ -1,0 +1,213 @@
+/**
+ * Handle .content and .metadata JSON files from reMarkable documents
+ */
+
+import type { DocumentMetadata, DocumentContent, RemarkableDocument } from './types';
+
+/**
+ * Parse a .metadata file
+ */
+export function parseMetadata(json: string): DocumentMetadata {
+  const data = JSON.parse(json);
+  return {
+    deleted: data.deleted ?? false,
+    lastModified: data.lastModified ?? '',
+    lastOpened: data.lastOpened ?? '',
+    lastOpenedPage: data.lastOpenedPage ?? 0,
+    metadatamodified: data.metadatamodified ?? false,
+    modified: data.modified ?? false,
+    parent: data.parent ?? '',
+    pinned: data.pinned ?? false,
+    synced: data.synced ?? false,
+    type: data.type ?? 'DocumentType',
+    version: data.version ?? 1,
+    visibleName: data.visibleName ?? 'Untitled',
+  };
+}
+
+/**
+ * Serialize a .metadata file
+ */
+export function serializeMetadata(metadata: DocumentMetadata): string {
+  return JSON.stringify(metadata, null, 2);
+}
+
+/**
+ * Parse a .content file
+ * Supports both the simple format and the newer CRDT-based format used by reMarkable devices
+ */
+export function parseContent(json: string): DocumentContent {
+  const data = JSON.parse(json);
+
+  // Check for CRDT-based format (newer reMarkable firmware)
+  // This format has cPages.pages[] with id fields instead of a simple pages array
+  if (data.cPages && data.cPages.pages) {
+    const pages = data.cPages.pages.map((p: { id: string }) => p.id);
+    const pageCount = data.cPages.original?.value ?? pages.length;
+
+    return {
+      fileType: data.fileType ?? 'pdf',
+      formatVersion: data.formatVersion ?? 2,
+      pageCount,
+      pages,
+      orientation: data.orientation,
+      // Preserve raw data for round-tripping
+      _raw: data,
+    };
+  }
+
+  // Simple format (older or manually created)
+  return {
+    coverPageNumber: data.coverPageNumber,
+    documentMetadata: data.documentMetadata,
+    dummyDocument: data.dummyDocument,
+    extraMetadata: data.extraMetadata,
+    fileType: data.fileType ?? 'pdf',
+    fontName: data.fontName,
+    formatVersion: data.formatVersion ?? 2,
+    lineHeight: data.lineHeight,
+    margins: data.margins,
+    orientation: data.orientation,
+    originalPageCount: data.originalPageCount,
+    pageCount: data.pageCount ?? 0,
+    pages: data.pages ?? [],
+    pageTags: data.pageTags,
+    sizeInBytes: data.sizeInBytes,
+    tags: data.tags,
+    textAlignment: data.textAlignment,
+    textScale: data.textScale,
+    transform: data.transform,
+  };
+}
+
+/**
+ * Serialize a .content file
+ * Uses the CRDT-based format expected by newer reMarkable firmware
+ */
+export function serializeContent(content: DocumentContent): string {
+  // Build the cPages structure used by reMarkable devices
+  // The 'redir' field maps each page entry to a PDF page index - critical for rendering
+  const cPages = {
+    lastOpened: {
+      timestamp: "1:0",
+      value: 0
+    },
+    original: {
+      timestamp: "1:0",
+      value: content.pageCount
+    },
+    pages: content.pages.map((id, index) => ({
+      id,
+      idx: {
+        timestamp: "1:0",
+        value: "ba"
+      },
+      redir: {
+        timestamp: "1:0",
+        value: index
+      },
+      template: {
+        timestamp: "1:0",
+        value: ""
+      }
+    })),
+    uuids: content.pages.map(() => ({
+      first: "",
+      second: ""
+    }))
+  };
+
+  const output: Record<string, unknown> = {
+    cPages,
+    fileType: content.fileType,
+  };
+
+  if (content.formatVersion !== undefined) output.formatVersion = content.formatVersion;
+  if (content.orientation !== undefined) output.orientation = content.orientation;
+  if (content.originalPageCount !== undefined) output.originalPageCount = content.originalPageCount;
+  output.pageCount = content.pageCount;
+
+  return JSON.stringify(output, null, 2);
+}
+
+/**
+ * Generate a new UUID (v4)
+ */
+export function generateUuid(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+/**
+ * Create a new .content file for a document with given page count
+ */
+export function createContent(pageCount: number, fileType: string = 'pdf'): DocumentContent {
+  const pages = Array.from({ length: pageCount }, () => generateUuid());
+
+  return {
+    fileType,
+    formatVersion: 2,
+    pageCount,
+    pages,
+    orientation: 'portrait',
+  };
+}
+
+/**
+ * Create a new .metadata file
+ */
+export function createMetadata(visibleName: string): DocumentMetadata {
+  const now = new Date().toISOString();
+
+  return {
+    deleted: false,
+    lastModified: now,
+    lastOpened: now,
+    lastOpenedPage: 0,
+    metadatamodified: false,
+    modified: true,
+    parent: '', // Root folder
+    pinned: false,
+    synced: false,
+    type: 'DocumentType',
+    version: 1,
+    visibleName,
+  };
+}
+
+/**
+ * Update a .content file with new page UUIDs
+ * Preserves the page order and generates new UUIDs for new pages
+ */
+export function updateContentPages(
+  content: DocumentContent,
+  newPageCount: number,
+  pageMapping: Map<number, number> // oldIndex -> newIndex
+): { content: DocumentContent; pageUuidMapping: Map<string, string> } {
+  const newPages: string[] = [];
+  const pageUuidMapping = new Map<string, string>(); // oldUuid -> newUuid
+
+  // Generate new UUIDs for all pages
+  for (let i = 0; i < newPageCount; i++) {
+    newPages.push(generateUuid());
+  }
+
+  // Map old page UUIDs to new page UUIDs based on page mapping
+  for (const [oldIndex, newIndex] of pageMapping) {
+    if (oldIndex < content.pages.length && newIndex < newPages.length) {
+      pageUuidMapping.set(content.pages[oldIndex], newPages[newIndex]);
+    }
+  }
+
+  return {
+    content: {
+      ...content,
+      pageCount: newPageCount,
+      pages: newPages,
+    },
+    pageUuidMapping,
+  };
+}

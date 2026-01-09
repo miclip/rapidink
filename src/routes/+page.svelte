@@ -8,6 +8,8 @@
 	import { COUNTRIES, STATES, hasStates, getStatesForCountry } from '$lib/holidays';
 	import type { GeneratorProgress } from '$lib/pdf/generator';
 	import { extractHandwriting, attachHandwriting, compareConfigs, type HandwritingData, type ConfigDiff } from '$lib/pdf/upgrade';
+	import { getDocumentZipInfo, loadDocumentFromZip, createDocumentZip, type DocumentZipInfo } from '$lib/remarkable';
+	import { migrateDocument, type PageAnchor } from '$lib/remarkable';
 
 	let config: RapidInkConfig = { ...DEFAULT_CONFIG };
 	let generating = false;
@@ -24,6 +26,14 @@
 	let importedPageCount: number | null = null; // Track original page count for index fallback
 	let preserveHandwriting = true; // Toggle for whether to preserve handwriting
 
+	// Device Sync state
+	let deviceSyncStep: 'upload' | 'review' | 'configure' | 'complete' = 'upload';
+	let deviceSyncZipData: ArrayBuffer | null = null;
+	let deviceSyncInfo: DocumentZipInfo | null = null;
+	let deviceSyncError: string | null = null;
+	let deviceSyncProcessing = false;
+	let deviceSyncResultUrl: string | null = null;
+
 	// Reactive: compare imported config with current config
 	// JSON.stringify forces Svelte to track all nested property changes
 	$: configString = JSON.stringify(config);
@@ -38,7 +48,8 @@
 		habits: false,
 		customCodes: false,
 		collections: false,
-		visual: false
+		visual: false,
+		deviceSync: false
 	};
 
 	// Navigation link groups
@@ -271,6 +282,56 @@
 		config.collections = [...config.collections];
 	}
 
+	/**
+	 * Extract embedded RapidInk config from a PDF document
+	 */
+	async function extractConfigFromPdf(pdfDoc: typeof PDFDocument extends new (...args: unknown[]) => infer R ? R : never): Promise<RapidInkConfig | null> {
+		try {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const rawAttachments = pdfDoc.catalog.lookup(PDFName.of('Names')) as any;
+			if (!rawAttachments) return null;
+
+			const embeddedFiles = rawAttachments.lookup(PDFName.of('EmbeddedFiles'));
+			if (!embeddedFiles) return null;
+
+			const namesArray = embeddedFiles.lookup(PDFName.of('Names'));
+			if (!namesArray || !namesArray.asArray) return null;
+
+			const arr = namesArray.asArray();
+			for (let i = 0; i < arr.length; i += 2) {
+				const nameObj = arr[i];
+				let filename = '';
+				if (nameObj instanceof PDFHexString) {
+					filename = nameObj.decodeText();
+				} else if (nameObj instanceof PDFString) {
+					filename = nameObj.decodeText();
+				} else if (nameObj.toString) {
+					filename = nameObj.toString();
+				}
+
+				if (filename.includes('rapidink-config.json')) {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					let fileSpec = arr[i + 1] as any;
+					if (fileSpec instanceof PDFRef) {
+						fileSpec = pdfDoc.context.lookup(fileSpec);
+					}
+					const efDict = fileSpec.lookup(PDFName.of('EF'));
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					let stream = efDict.lookup(PDFName.of('F')) as any;
+					if (stream instanceof PDFRef) {
+						stream = pdfDoc.context.lookup(stream);
+					}
+					const decoded = decodePDFRawStream(stream);
+					const text = new TextDecoder().decode(decoded.decode());
+					return JSON.parse(text);
+				}
+			}
+		} catch (e) {
+			console.warn('Failed to extract config from PDF:', e);
+		}
+		return null;
+	}
+
 	async function handleImportConfig(event: Event) {
 		const input = event.target as HTMLInputElement;
 		if (!input.files?.length) return;
@@ -463,11 +524,164 @@
 		preserveHandwriting = true;
 		userMessage = null;
 	}
+
+	// Device Sync handlers
+	async function handleDeviceSyncUpload(event: Event) {
+		const input = event.target as HTMLInputElement;
+		if (!input.files?.length) return;
+
+		const file = input.files[0];
+		deviceSyncError = null;
+
+		try {
+			const arrayBuffer = await file.arrayBuffer();
+			const info = await getDocumentZipInfo(arrayBuffer);
+
+			deviceSyncZipData = arrayBuffer;
+			deviceSyncInfo = info;
+
+			// Try to extract config from the embedded PDF
+			const doc = await loadDocumentFromZip(arrayBuffer);
+			if (doc.originalPdf) {
+				try {
+					const pdfDoc = await PDFDocument.load(doc.originalPdf, { ignoreEncryption: true });
+					const extractedConfig = await extractConfigFromPdf(pdfDoc);
+					if (extractedConfig) {
+						// Apply extracted config, keeping current year logic
+						const defaultYear = new Date().getMonth() >= 9 ? new Date().getFullYear() + 1 : new Date().getFullYear();
+						config = {
+							...DEFAULT_CONFIG,
+							...extractedConfig,
+							holidays: { ...DEFAULT_CONFIG.holidays, ...extractedConfig.holidays },
+							year: defaultYear
+						};
+						userMessage = {
+							type: 'success',
+							text: `Loaded configuration from "${info.visibleName}"`
+						};
+					}
+				} catch (e) {
+					console.warn('Failed to extract config from PDF:', e);
+				}
+			}
+
+			deviceSyncStep = 'review';
+		} catch (err) {
+			deviceSyncError = 'Failed to read ZIP: ' + (err as Error).message;
+		}
+
+		input.value = '';
+	}
+
+	function deviceSyncBack() {
+		if (deviceSyncStep === 'review') {
+			deviceSyncStep = 'upload';
+			deviceSyncZipData = null;
+			deviceSyncInfo = null;
+		} else if (deviceSyncStep === 'configure') {
+			deviceSyncStep = 'review';
+		} else if (deviceSyncStep === 'complete') {
+			deviceSyncStep = 'configure';
+		}
+	}
+
+	function deviceSyncNext() {
+		if (deviceSyncStep === 'review') {
+			deviceSyncStep = 'configure';
+		}
+	}
+
+	async function handleDeviceSyncGenerate() {
+		if (!deviceSyncZipData || !deviceSyncInfo) return;
+
+		deviceSyncProcessing = true;
+		deviceSyncError = null;
+
+		try {
+			// Load the document from ZIP
+			const doc = await loadDocumentFromZip(deviceSyncZipData);
+
+			// Generate the new PDF template
+			const { generatePDF, extractPageAnchors } = await import('$lib/pdf/generator');
+			const pdfBytes = await generatePDF(config, (p) => {
+				progress = p;
+			});
+			progress = null;
+
+			// Extract anchors from new PDF
+			const newPdfDoc = await PDFDocument.load(pdfBytes);
+			const newAnchors = extractPageAnchors(newPdfDoc);
+
+			// Extract anchors from old PDF if it exists
+			let oldAnchors: PageAnchor[] = [];
+			if (doc.originalPdf) {
+				const oldPdfDoc = await PDFDocument.load(doc.originalPdf);
+				oldAnchors = extractPageAnchors(oldPdfDoc);
+			}
+
+			// Use raw .rm bytes directly from the loaded document
+			const oldRmFiles = doc.rawPages;
+
+			// Migrate the document
+			const result = migrateDocument({
+				oldContent: doc.content,
+				oldRmFiles,
+				oldAnchors,
+				newAnchors,
+				newPageCount: newPdfDoc.getPageCount(),
+				newPdf: pdfBytes,
+				visibleName: deviceSyncInfo.visibleName + ' (Updated)',
+			});
+
+			// Create the output ZIP
+			const outputZip = await createDocumentZip(
+				doc.uuid.replace(/-/g, '') + Date.now().toString(16), // New UUID
+				result.metadata,
+				result.content,
+				result.rmFiles,
+				result.pdf
+			);
+
+			// Create download URL
+			if (deviceSyncResultUrl) {
+				URL.revokeObjectURL(deviceSyncResultUrl);
+			}
+			deviceSyncResultUrl = URL.createObjectURL(outputZip);
+
+			deviceSyncStep = 'complete';
+
+			userMessage = {
+				type: 'success',
+				text: `Migrated ${result.summary.pagesWithStrokes} pages with handwriting out of ${result.summary.mappedPages} matched pages.`
+			};
+		} catch (err) {
+			console.error('Device sync error:', err);
+			deviceSyncError = 'Migration failed: ' + (err as Error).message;
+		} finally {
+			deviceSyncProcessing = false;
+		}
+	}
+
+	function resetDeviceSync() {
+		deviceSyncStep = 'upload';
+		deviceSyncZipData = null;
+		deviceSyncInfo = null;
+		deviceSyncError = null;
+		deviceSyncProcessing = false;
+		if (deviceSyncResultUrl) {
+			URL.revokeObjectURL(deviceSyncResultUrl);
+			deviceSyncResultUrl = null;
+		}
+	}
 </script>
 
 <div class="grid">
 	<!-- Configuration Panel -->
 	<div class="config-panel">
+		<div class="page-header">
+			<h1>RapidInk</h1>
+			<a href="/docs" class="docs-link">Documentation</a>
+		</div>
 		<div class="accordion">
 			<!-- General Settings -->
 			<div class="accordion-item">
@@ -1027,6 +1241,115 @@
 					</div>
 				</div>
 			</div>
+
+			<!-- Notes Preservation (Advanced) -->
+			<div class="accordion-item">
+				<button class="accordion-header" on:click={() => toggleSection('deviceSync')}>
+					<span>Notes Preservation (Advanced)</span>
+					<span>{openSections.deviceSync ? '-' : '+'}</span>
+				</button>
+				<div class="accordion-content" class:open={openSections.deviceSync}>
+					<p class="form-hint mb-2">
+						<strong>Preserve Editable Handwriting</strong><br>
+						Unlike PDF export, this workflow preserves your handwriting as editable strokes.
+						Requires <a href="/docs#notes-preservation">SSH access</a> to your reMarkable.
+					</p>
+
+					<!-- Step indicators -->
+					<div class="sync-steps mb-2">
+						<span class="step" class:active={deviceSyncStep === 'upload'}>Upload</span>
+						<span class="step-arrow">&gt;</span>
+						<span class="step" class:active={deviceSyncStep === 'review'}>Review</span>
+						<span class="step-arrow">&gt;</span>
+						<span class="step" class:active={deviceSyncStep === 'configure'}>Config</span>
+						<span class="step-arrow">&gt;</span>
+						<span class="step" class:active={deviceSyncStep === 'complete'}>Download</span>
+					</div>
+
+					{#if deviceSyncError}
+						<div class="user-message error mb-1">
+							<span>{deviceSyncError}</span>
+							<button class="dismiss-btn" on:click={() => deviceSyncError = null}>&times;</button>
+						</div>
+					{/if}
+
+					<!-- Step 1: Upload -->
+					{#if deviceSyncStep === 'upload'}
+						<div class="sync-step-content">
+							<p style="font-size: 0.9em; margin-bottom: 8px;">
+								First, download your document from your reMarkable via SSH:
+							</p>
+							<pre class="command-block"><code>scp -r root@10.11.99.1:/home/root/.local/share/remarkable/xochitl/UUID ./my-doc
+zip -r my-doc.zip my-doc/</code></pre>
+							<p style="font-size: 0.85em; color: var(--text-muted); margin: 8px 0;">
+								Replace UUID with your document's folder name. See <a href="/docs#notes-preservation">docs</a> to find it.
+							</p>
+							<label class="upload-zone">
+								<input type="file" accept=".zip" on:change={handleDeviceSyncUpload} />
+								<span>Drop ZIP here or click to browse</span>
+							</label>
+						</div>
+					{/if}
+
+					<!-- Step 2: Review -->
+					{#if deviceSyncStep === 'review' && deviceSyncInfo}
+						<div class="sync-step-content">
+							<div class="info-card">
+								<h4>{deviceSyncInfo.visibleName}</h4>
+								<dl class="info-grid">
+									<dt>Pages</dt>
+									<dd>{deviceSyncInfo.pageCount}</dd>
+									<dt>Pages with handwriting</dt>
+									<dd>{deviceSyncInfo.pagesWithRmFiles}</dd>
+									<dt>Has PDF</dt>
+									<dd>{deviceSyncInfo.hasPdf ? 'Yes' : 'No'}</dd>
+								</dl>
+							</div>
+							<div class="sync-nav">
+								<button class="btn btn-secondary" on:click={deviceSyncBack}>← Back</button>
+								<button class="btn btn-primary" on:click={deviceSyncNext}>Configure Template →</button>
+							</div>
+						</div>
+					{/if}
+
+					<!-- Step 3: Configure -->
+					{#if deviceSyncStep === 'configure'}
+						<div class="sync-step-content">
+							<p style="font-size: 0.9em; margin-bottom: 8px;">
+								Adjust your template settings above (year, sections, visual options), then generate.
+							</p>
+							<div class="sync-nav">
+								<button class="btn btn-secondary" on:click={deviceSyncBack}>← Back</button>
+								<button
+									class="btn btn-primary"
+									on:click={handleDeviceSyncGenerate}
+									disabled={deviceSyncProcessing}
+								>
+									{deviceSyncProcessing ? 'Processing...' : 'Generate & Migrate →'}
+								</button>
+							</div>
+						</div>
+					{/if}
+
+					<!-- Step 4: Complete -->
+					{#if deviceSyncStep === 'complete' && deviceSyncResultUrl}
+						<div class="sync-step-content">
+							<div class="info-card success">
+								<h4>Migration Complete</h4>
+								<p>Your document is ready with handwriting preserved.</p>
+							</div>
+							<a href={deviceSyncResultUrl} download="remarkable-document.zip" class="btn btn-primary" style="display: block; text-align: center; margin-bottom: 8px;">
+								Download ZIP
+							</a>
+							<p style="font-size: 0.85em; margin-bottom: 8px;">Upload to your device:</p>
+							<pre class="command-block"><code>unzip remarkable-document.zip
+scp -r NEW-UUID root@10.11.99.1:/home/root/.local/share/remarkable/xochitl/
+ssh root@10.11.99.1 systemctl restart xochitl</code></pre>
+							<button class="btn btn-secondary mt-1" on:click={resetDeviceSync}>Start Over</button>
+						</div>
+					{/if}
+				</div>
+			</div>
 		</div>
 
 		<!-- Import/Export Section -->
@@ -1038,7 +1361,7 @@
 					<input type="file" accept=".json,.pdf" on:change={handleImportConfig} style="display:none" />
 				</label>
 			</div>
-			<p class="form-hint mt-1">RapidInk PDFs have your settings embedded. Import one to restore your config. RapidInk can also preserve your e-ink device handwriting on the new PDF, enabling you to change visual elements without starting over.</p>
+			<p class="form-hint mt-1">RapidInk PDFs have your settings embedded. Import one to restore your config and re-export handwriting marks to the new PDF. For reMarkable users who want to preserve native handwriting (selection, erasing), use the Notes Preservation feature instead.</p>
 
 			{#if importedFilename}
 				<div class="imported-template-info mt-1">
@@ -1163,6 +1486,30 @@
 </div>
 
 <style>
+	.page-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1rem;
+		padding-bottom: 0.5rem;
+		border-bottom: 1px solid var(--border-color);
+	}
+
+	.page-header h1 {
+		margin: 0;
+		font-size: 1.5rem;
+	}
+
+	.docs-link {
+		font-size: 0.9rem;
+		color: var(--link-color, #0066cc);
+		text-decoration: none;
+	}
+
+	.docs-link:hover {
+		text-decoration: underline;
+	}
+
 	.config-panel {
 		max-height: calc(100vh - 120px);
 		overflow-y: auto;
@@ -1233,5 +1580,139 @@
 		background: rgba(40, 167, 69, 0.1);
 		border: 1px solid rgba(40, 167, 69, 0.3);
 		border-radius: 4px;
+	}
+
+	/* Device Sync styles */
+	.sync-steps {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		font-size: 0.75rem;
+	}
+
+	.sync-steps .step {
+		padding: 0.2rem 0.4rem;
+		background: var(--bg-subtle, #f5f5f5);
+		border-radius: 4px;
+		color: var(--text-muted);
+		white-space: nowrap;
+	}
+
+	.sync-steps .step.active {
+		background: var(--primary-color, #0066cc);
+		color: white;
+	}
+
+	.sync-steps .step-arrow {
+		color: var(--text-muted);
+	}
+
+	.sync-step-content {
+		margin-top: 1rem;
+	}
+
+	.command-block {
+		background: #1e1e1e;
+		color: #d4d4d4;
+		padding: 0.75rem;
+		border-radius: 4px;
+		overflow-x: auto;
+		font-size: 0.85rem;
+		margin: 0.5rem 0;
+	}
+
+	.command-block code {
+		font-family: 'Courier New', monospace;
+	}
+
+	.upload-zone {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 2rem;
+		border: 2px dashed var(--border-color);
+		border-radius: 8px;
+		cursor: pointer;
+		text-align: center;
+		transition: border-color 0.2s, background 0.2s;
+	}
+
+	.upload-zone:hover {
+		border-color: var(--primary-color);
+		background: rgba(0, 102, 204, 0.05);
+	}
+
+	.upload-zone input {
+		display: none;
+	}
+
+	.upload-zone span {
+		color: var(--text-muted);
+	}
+
+	.info-card {
+		background: var(--bg-subtle, #f5f5f5);
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		padding: 1rem;
+		margin-bottom: 1rem;
+	}
+
+	.info-card.success {
+		background: rgba(40, 167, 69, 0.1);
+		border-color: rgba(40, 167, 69, 0.3);
+	}
+
+	.info-card h4 {
+		margin: 0 0 0.5rem 0;
+		font-size: 1rem;
+	}
+
+	.info-card p {
+		margin: 0;
+		color: var(--text-muted);
+		font-size: 0.9rem;
+	}
+
+	.info-grid {
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: 0.25rem 1rem;
+		margin: 0;
+		font-size: 0.9rem;
+	}
+
+	.info-grid dt {
+		color: var(--text-muted);
+	}
+
+	.info-grid dd {
+		margin: 0;
+		font-weight: 500;
+	}
+
+	.sync-nav {
+		display: flex;
+		gap: 0.5rem;
+		justify-content: space-between;
+		margin-top: 1rem;
+	}
+
+	.btn-primary {
+		background: var(--primary-color, #0066cc);
+		color: white;
+		border: none;
+		padding: 0.5rem 1rem;
+		border-radius: 4px;
+		cursor: pointer;
+	}
+
+	.btn-primary:hover {
+		background: var(--primary-hover, #0052a3);
+	}
+
+	.btn-primary:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
 	}
 </style>
