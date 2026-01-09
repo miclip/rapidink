@@ -89,11 +89,17 @@ for ext in metadata content pdf; do
     fi
 done
 
-# Restart xochitl to pick up the new document
-echo "Restarting xochitl service..."
-sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no \
-    "root@$DEVICE_IP" "systemctl restart xochitl"
+# Optionally restart xochitl
+if [ "$RESTART_XOCHITL" = "1" ]; then
+    echo "Restarting xochitl service..."
+    sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no \
+        "root@$DEVICE_IP" "systemctl restart xochitl"
+    echo "Your reMarkable should reload and show the new document."
+else
+    echo ""
+    echo "Document uploaded. Pull down from top of screen to refresh, or restart device."
+    echo "To auto-restart xochitl, run with: RESTART_XOCHITL=1 $0 ..."
+fi
 
 echo ""
-echo "Done! Document uploaded successfully."
-echo "Your reMarkable should reload and show the new document."
+echo "Done!"

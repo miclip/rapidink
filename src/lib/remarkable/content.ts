@@ -82,30 +82,50 @@ export function parseContent(json: string): DocumentContent {
 
 /**
  * Serialize a .content file
+ * Uses the CRDT-based format expected by newer reMarkable firmware
  */
 export function serializeContent(content: DocumentContent): string {
-  // Only include defined fields
-  const output: Record<string, unknown> = {};
+  // Build the cPages structure used by reMarkable devices
+  // The 'redir' field maps each page entry to a PDF page index - critical for rendering
+  const cPages = {
+    lastOpened: {
+      timestamp: "1:0",
+      value: 0
+    },
+    original: {
+      timestamp: "1:0",
+      value: content.pageCount
+    },
+    pages: content.pages.map((id, index) => ({
+      id,
+      idx: {
+        timestamp: "1:0",
+        value: "ba"
+      },
+      redir: {
+        timestamp: "1:0",
+        value: index
+      },
+      template: {
+        timestamp: "1:0",
+        value: ""
+      }
+    })),
+    uuids: content.pages.map(() => ({
+      first: "",
+      second: ""
+    }))
+  };
 
-  if (content.coverPageNumber !== undefined) output.coverPageNumber = content.coverPageNumber;
-  if (content.documentMetadata !== undefined) output.documentMetadata = content.documentMetadata;
-  if (content.dummyDocument !== undefined) output.dummyDocument = content.dummyDocument;
-  if (content.extraMetadata !== undefined) output.extraMetadata = content.extraMetadata;
-  output.fileType = content.fileType;
-  if (content.fontName !== undefined) output.fontName = content.fontName;
+  const output: Record<string, unknown> = {
+    cPages,
+    fileType: content.fileType,
+  };
+
   if (content.formatVersion !== undefined) output.formatVersion = content.formatVersion;
-  if (content.lineHeight !== undefined) output.lineHeight = content.lineHeight;
-  if (content.margins !== undefined) output.margins = content.margins;
   if (content.orientation !== undefined) output.orientation = content.orientation;
   if (content.originalPageCount !== undefined) output.originalPageCount = content.originalPageCount;
   output.pageCount = content.pageCount;
-  output.pages = content.pages;
-  if (content.pageTags !== undefined) output.pageTags = content.pageTags;
-  if (content.sizeInBytes !== undefined) output.sizeInBytes = content.sizeInBytes;
-  if (content.tags !== undefined) output.tags = content.tags;
-  if (content.textAlignment !== undefined) output.textAlignment = content.textAlignment;
-  if (content.textScale !== undefined) output.textScale = content.textScale;
-  if (content.transform !== undefined) output.transform = content.transform;
 
   return JSON.stringify(output, null, 2);
 }
