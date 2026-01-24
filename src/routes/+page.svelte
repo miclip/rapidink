@@ -695,7 +695,7 @@
 	<div class="config-panel">
 		<div class="page-header">
 			<h1>RapidInk</h1>
-			<a href="/docs" class="docs-link">Documentation</a>
+			<a href="{base}/docs" class="docs-link">Documentation</a>
 		</div>
 		<div class="accordion">
 			<!-- General Settings -->
@@ -1267,7 +1267,7 @@
 					<p class="form-hint mb-2">
 						<strong>Preserve Editable Handwriting</strong><br>
 						Unlike PDF export, this workflow preserves your handwriting as editable strokes.
-						Requires <a href="/docs#notes-preservation">SSH access</a> to your reMarkable.
+						Requires <a href="{base}/docs#notes-preservation">SSH access</a> to your reMarkable.
 					</p>
 
 					<!-- Step indicators -->
@@ -1297,7 +1297,7 @@
 							<pre class="command-block"><code>scp -r root@10.11.99.1:/home/root/.local/share/remarkable/xochitl/UUID ./my-doc
 zip -r my-doc.zip my-doc/</code></pre>
 							<p style="font-size: 0.85em; color: var(--text-muted); margin: 8px 0;">
-								Replace UUID with your document's folder name. See <a href="/docs#notes-preservation">docs</a> to find it.
+								Replace UUID with your document's folder name. See <a href="{base}/docs#notes-preservation">docs</a> to find it.
 							</p>
 							<label class="upload-zone">
 								<input type="file" accept=".zip" on:change={handleDeviceSyncUpload} />

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	let activeSection = 'getting-started';
 
 	const sections = [
@@ -32,7 +33,7 @@
 <div class="docs-layout">
 	<nav class="docs-nav">
 		<div class="nav-header">
-			<a href="/" class="back-link">← Back to Generator</a>
+			<a href="{base}/" class="back-link">← Back to Generator</a>
 		</div>
 		<ul>
 			{#each sections as section}
