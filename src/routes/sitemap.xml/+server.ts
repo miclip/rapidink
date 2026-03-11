@@ -1,6 +1,4 @@
-import { base } from '$app/paths';
-
-const SITE_URL = 'https://miclip.github.io' + base;
+const SITE_URL = 'https://rapidink.miclip.io';
 
 const pages = ['', '/docs'];
 
