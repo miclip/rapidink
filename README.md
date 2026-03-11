@@ -21,7 +21,7 @@ Customizable bullet journal PDF generator for e-ink devices. Create personalized
 
 ### Online
 
-Visit the hosted version at [miclip.github.io/rapidink](https://miclip.github.io/rapidink)
+Visit the hosted version at [rapidink.miclip.io](https://rapidink.miclip.io)
 
 ### Local Development
 
